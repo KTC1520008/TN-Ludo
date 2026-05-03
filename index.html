@@ -102,7 +102,10 @@
     align-items: center;
     gap: 4px;
   }
-  .side-yards-wrapper { display: contents; } /* desktop: red & yellow appear inline in middle-row */
+  .left-yard-slot, .right-yard-slot {
+    display: flex;
+    align-items: center;
+  }
 
   .yard {
     display: flex;
@@ -143,39 +146,73 @@
     flex-shrink: 0;
   }
 
-  /* ---------- MOBILE LAYOUT (narrow screens) ---------- */
-  /* Stack everything vertically, board uses most of the screen width */
-  @media (max-width: 600px) {
+  /* ============================================================
+     MOBILE LAYOUT — kicks in for any screen 900px or narrower
+     ============================================================ */
+  @media (max-width: 900px) {
     .app-root {
-      padding: 8px;
+      padding: 6px;
     }
+
+    /* Board takes most of the screen width but stays smaller so dice/controls fit */
     .board {
-      width: 92vw;
-      max-width: 460px;
+      width: min(78vw, 360px);
+      max-width: 360px;
       padding: 4px;
       border-width: 3px;
     }
-    /* On mobile, the side yards (red, yellow) appear ABOVE the board side-by-side */
+
+    /* Middle row becomes a CSS grid: red+yellow above, board below */
     .middle-row {
-      flex-direction: column;
-      gap: 4px;
-      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-areas:
+        "left right"
+        "board board";
+      justify-items: center;
       align-items: center;
-    }
-    .side-yards-wrapper {
-      display: flex;
-      flex-direction: row;
-      gap: 12px;
-      justify-content: center;
+      gap: 6px;
       width: 100%;
+      max-width: 380px;
     }
+    .left-yard-slot {
+      grid-area: left;
+      justify-self: end;
+      padding-right: 8px;
+    }
+    .right-yard-slot {
+      grid-area: right;
+      justify-self: start;
+      padding-left: 8px;
+    }
+    .board {
+      grid-area: board;
+      width: 100%;
+      max-width: 360px;
+    }
+
+    /* Smaller yards on mobile */
     .yard {
-      padding: 5px 7px;
+      padding: 4px 6px;
     }
     .yard-grid {
       gap: 3px;
     }
+    .yard-label {
+      font-size: 9px;
+    }
     .controls {
+      max-width: 100%;
+      margin-top: 8px;
+    }
+  }
+
+  /* Extra-tight layout for very small phones (≤380px) */
+  @media (max-width: 380px) {
+    .board {
+      width: 95vw;
+    }
+    .middle-row {
       max-width: 100%;
     }
   }
@@ -875,7 +912,9 @@ function ThaayamGame() {
         {renderYard("green")}
 
         <div className="middle-row">
-          {renderYard("red")}
+          <div className="left-yard-slot">
+            {renderYard("red")}
+          </div>
           <div className="board">
             <div className="board-grid">
               {Array.from({ length: 7 }, (_, r) =>
@@ -883,7 +922,9 @@ function ThaayamGame() {
               )}
             </div>
           </div>
-          {renderYard("yellow")}
+          <div className="right-yard-slot">
+            {renderYard("yellow")}
+          </div>
         </div>
 
         {renderYard("blue")}
