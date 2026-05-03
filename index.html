@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>தாயம் · Thaayam</title>
+
+<!-- React + ReactDOM via CDN -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+<!-- Babel for in-browser JSX compilation -->
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Noto+Sans+Tamil:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+    font-family: 'Cormorant Garamond', Georgia, serif;
+  }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; padding: 0; }
+  button:disabled { cursor: not-allowed; }
+
+  @keyframes coinPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  .pulse { animation: coinPulse 1s ease-in-out infinite; }
+  .pawn-pulse { animation: coinPulse 1s ease-in-out infinite; }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  .bounce { animation: bounce 0.8s ease-in-out infinite; }
+
+  #loading {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: linear-gradient(180deg, #FFF59D 0%, #FBC02D 100%);
+    z-index: 9999;
+    transition: opacity 0.4s;
+  }
+  #loading.hide { opacity: 0; pointer-events: none; }
+  #loading h1 { font-size: 2.5rem; color: #5D4037; margin: 0; font-family: 'Noto Sans Tamil', serif; }
+  #loading p { color: #6D4C41; margin-top: 0.5rem; font-size: 0.9rem; letter-spacing: 0.2em; }
+  .spinner {
+    width: 40px; height: 40px;
+    border: 4px solid #FBC02D;
+    border-top: 4px solid #5D4037;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-top: 1.5rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .app-root {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px;
+    background: linear-gradient(180deg, #FFF59D 0%, #FBC02D 100%);
+  }
+
+  .title { text-align: center; margin-bottom: 8px; }
+  .title h1 {
+    font-size: clamp(22px, 5vw, 32px);
+    font-weight: 700;
+    color: #3E2723;
+    letter-spacing: 2px;
+    margin: 0;
+    font-family: 'Noto Sans Tamil', 'Cormorant Garamond', serif;
+  }
+  .title p {
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #5D4037;
+    margin: 2px 0 0;
+  }
+
+  /* Default: side-by-side yards (desktop / tablet landscape) */
+  .board-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .middle-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .side-yards-wrapper { display: contents; } /* desktop: red & yellow appear inline in middle-row */
+
+  .yard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+  .yard.current {
+    box-shadow: 0 0 0 2px white, 0 0 0 4px rgba(0,0,0,0.05);
+  }
+  .yard-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+  .yard-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+  .yard-finished {
+    font-size: 9px;
+    font-weight: 600;
+  }
+
+  .board {
+    position: relative;
+    background: white;
+    padding: 6px;
+    width: min(70vw, 380px);
+    aspect-ratio: 1;
+    border: 4px solid #7B1FA2;
+    border-radius: 4px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    flex-shrink: 0;
+  }
+
+  /* ---------- MOBILE LAYOUT (narrow screens) ---------- */
+  /* Stack everything vertically, board uses most of the screen width */
+  @media (max-width: 600px) {
+    .app-root {
+      padding: 8px;
+    }
+    .board {
+      width: 92vw;
+      max-width: 460px;
+      padding: 4px;
+      border-width: 3px;
+    }
+    /* On mobile, the side yards (red, yellow) appear ABOVE the board side-by-side */
+    .middle-row {
+      flex-direction: column;
+      gap: 4px;
+      width: 100%;
+      align-items: center;
+    }
+    .side-yards-wrapper {
+      display: flex;
+      flex-direction: row;
+      gap: 12px;
+      justify-content: center;
+      width: 100%;
+    }
+    .yard {
+      padding: 5px 7px;
+    }
+    .yard-grid {
+      gap: 3px;
+    }
+    .controls {
+      max-width: 100%;
+    }
+  }
+
+  .board-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: repeat(7, 1fr);
+    width: 100%;
+    height: 100%;
+  }
+  .cell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #B0B0B0;
+    aspect-ratio: 1;
+    transition: box-shadow 0.15s;
+  }
+  .x-mark {
+    position: absolute;
+    font-weight: 900;
+    font-family: Arial Black, Arial, sans-serif;
+    pointer-events: none;
+    user-select: none;
+    font-size: clamp(11px, 3.5vw, 20px);
+  }
+  .coin-stack {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    width: 100%;
+    height: 100%;
+    padding: 1px;
+  }
+  .coin {
+    border-radius: 50%;
+    transition: all 0.2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+
+  .controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 400px;
+    margin-top: 12px;
+  }
+  .turn-pill {
+    padding: 6px 20px;
+    border-radius: 999px;
+    color: white;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    font-size: 13px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    font-family: 'Noto Sans Tamil', 'Cormorant Garamond', serif;
+  }
+  .dice-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255,255,255,0.85);
+    padding: 8px 16px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  .stick-die {
+    width: 70px;
+    height: 14px;
+    border-radius: 2px;
+    border: 1px solid #8b6914;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 8px;
+  }
+  .stick-die-empty { background: linear-gradient(180deg, #d4af37, #b8941f); }
+  .stick-die-rolled { background: linear-gradient(180deg, #f4d27a, #d4af37); }
+  .stick-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #3a2510;
+  }
+  .total-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .total-label {
+    font-size: 8px;
+    color: #57534E;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .total-value {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 700;
+    background: white;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .roll-button {
+    padding: 8px 20px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 700;
+    font-size: 13px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transition: transform 0.15s;
+  }
+  .roll-button:not(:disabled):hover { transform: scale(1.05); }
+  .roll-button:disabled { opacity: 0.5; }
+
+  .message-box {
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.9);
+    color: #292524;
+    font-size: 12px;
+    text-align: center;
+    width: 100%;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    border: 1px solid rgba(139, 105, 20, 0.3);
+    line-height: 1.4;
+  }
+  .pending-box {
+    font-size: 10px;
+    color: #44403C;
+    background: rgba(255,255,255,0.7);
+    padding: 4px 12px;
+    border-radius: 999px;
+  }
+  .legend {
+    color: #44403C;
+    font-size: 9px;
+    text-align: center;
+    max-width: 320px;
+    line-height: 1.5;
+    margin-top: 4px;
+  }
+  .play-again {
+    margin-top: 8px;
+    padding: 10px 24px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 700;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <h1>தாயம்</h1>
+  <p>THAAYAM · LOADING</p>
+  <div class="spinner"></div>
+</div>
+
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react,env">
+const { useState, useEffect, useMemo } = React;
+
+const COLORS = {
+  red:    { main: "#E53935", light: "#FFCDD2", dark: "#B71C1C", name: "சிவப்பு", label: "RED" },
+  green:  { main: "#43A047", light: "#C8E6C9", dark: "#1B5E20", name: "பச்சை",  label: "GREEN" },
+  yellow: { main: "#FDD835", light: "#FFF9C4", dark: "#F57F17", name: "மஞ்சள்", label: "YELLOW" },
+  blue:   { main: "#29B6F6", light: "#B3E5FC", dark: "#0277BD", name: "நீலம்",  label: "BLUE" },
+};
+
+const PLAYER_ORDER = ["red", "green", "yellow", "blue"];
+const BONUS_VALUES = new Set([1, 5, 6, 12]);
+const ENTRY_VALUES = new Set([1, 5]);
+
+function outerRingCounterClockwise() {
+  const r = [];
+  for (let c = 6; c >= 0; c--) r.push(`0,${c}`);
+  for (let row = 1; row <= 6; row++) r.push(`${row},0`);
+  for (let c = 1; c <= 6; c++) r.push(`6,${c}`);
+  for (let row = 5; row >= 1; row--) r.push(`${row},6`);
+  return r;
+}
+function middleRingCounterClockwise() {
+  const r = [];
+  for (let c = 5; c >= 1; c--) r.push(`1,${c}`);
+  for (let row = 2; row <= 5; row++) r.push(`${row},1`);
+  for (let c = 2; c <= 5; c++) r.push(`5,${c}`);
+  for (let row = 4; row >= 2; row--) r.push(`${row},5`);
+  return r;
+}
+function innerRingCounterClockwise() {
+  const r = [];
+  for (let c = 4; c >= 2; c--) r.push(`2,${c}`);
+  for (let row = 3; row <= 4; row++) r.push(`${row},2`);
+  for (let c = 3; c <= 4; c++) r.push(`4,${c}`);
+  r.push(`3,4`);
+  return r;
+}
+const OUTER = outerRingCounterClockwise();
+const MIDDLE = middleRingCounterClockwise();
+const INNER = innerRingCounterClockwise();
+const CENTER = "3,3";
+
+const ENTRY_SQUARE_V2 = { green: "0,3", red: "3,0", yellow: "3,6", blue: "6,3" };
+
+function rotateRing(ring, startSquare) {
+  const i = ring.indexOf(startSquare);
+  if (i === -1) return ring;
+  return [...ring.slice(i), ...ring.slice(0, i)];
+}
+
+function buildPath(color) {
+  const start = ENTRY_SQUARE_V2[color];
+  const outer = rotateRing(OUTER, start);
+  const middleEntry = { green: "1,3", red: "3,1", blue: "5,3", yellow: "3,5" }[color];
+  const middle = rotateRing(MIDDLE, middleEntry);
+  const innerEntry = { green: "2,3", red: "3,2", blue: "4,3", yellow: "3,4" }[color];
+  const inner = rotateRing(INNER, innerEntry);
+  return [...outer, ...middle, ...inner, CENTER];
+}
+
+const PATHS = {
+  red: buildPath("red"), green: buildPath("green"),
+  yellow: buildPath("yellow"), blue: buildPath("blue"),
+};
+
+const SAFE_SQUARES = new Set([
+  "0,3", "3,0", "6,3", "3,6",
+  "1,1", "1,5", "5,1", "5,5",
+  "3,3",
+]);
+
+const ENTRY_COLOR_MAP = { "0,3": "green", "3,0": "red", "3,6": "yellow", "6,3": "blue" };
+
+function ThaayamGame() {
+  const [coins, setCoins] = useState(() => {
+    const c = {};
+    Object.keys(COLORS).forEach((color) => {
+      for (let i = 0; i < 6; i++) {
+        c[`${color}-${i}`] = { color, pathIndex: -1, finished: false };
+      }
+    });
+    return c;
+  });
+
+  const [currentPlayer, setCurrentPlayer] = useState("red");
+  const [dice, setDice] = useState([null, null]);
+  const [diceValue, setDiceValue] = useState(null);
+  const [rolling, setRolling] = useState(false);
+  const [hasRolled, setHasRolled] = useState(false);
+  const [pendingValues, setPendingValues] = useState([]);
+  const [message, setMessage] = useState("Roll the dice! First coin needs a 1 to enter.");
+  const [winner, setWinner] = useState(null);
+  const [autoMoving, setAutoMoving] = useState(false);
+  const [animating, setAnimating] = useState(false);
+
+  const hasCoinOnBoard = (color, coinsState = coins) =>
+    Object.values(coinsState).some((c) => c.color === color && c.pathIndex >= 0 && !c.finished);
+
+  const yardCoins = (color) =>
+    Object.entries(coins).filter(([_, c]) => c.color === color && c.pathIndex === -1 && !c.finished);
+
+  const boardCoins = (color) =>
+    Object.entries(coins).filter(([_, c]) => c.color === color && c.pathIndex >= 0 && !c.finished);
+
+  const finishedCount = (color) =>
+    Object.values(coins).filter((c) => c.color === color && c.finished).length;
+
+  const getMovableCoins = useMemo(() => {
+    if (!hasRolled || pendingValues.length === 0) return {};
+    const movable = {};
+    const onBoardFlag = hasCoinOnBoard(currentPlayer);
+    Object.entries(coins).forEach(([id, coin]) => {
+      if (coin.color !== currentPlayer || coin.finished) return;
+      for (const v of pendingValues) {
+        if (coin.pathIndex === -1) {
+          if (!onBoardFlag && v === 1) { movable[id] = v; return; }
+          if (onBoardFlag && ENTRY_VALUES.has(v)) { movable[id] = v; return; }
+        } else {
+          const newIdx = coin.pathIndex + v;
+          if (newIdx < PATHS[currentPlayer].length) { movable[id] = v; return; }
+        }
+      }
+    });
+    return movable;
+  }, [coins, currentPlayer, pendingValues, hasRolled]);
+
+  const rollDice = () => {
+    if (rolling || winner || autoMoving || animating) return;
+    setRolling(true);
+    let n = 0;
+    const interval = setInterval(() => {
+      setDice([Math.floor(Math.random() * 4), Math.floor(Math.random() * 4)]);
+      n++;
+      if (n > 8) {
+        clearInterval(interval);
+        const f1 = Math.floor(Math.random() * 4);
+        const f2 = Math.floor(Math.random() * 4);
+        setDice([f1, f2]);
+        let value = f1 + f2;
+        if (value === 0) value = 12;
+        setDiceValue(value);
+        setRolling(false);
+        setHasRolled(true);
+        setPendingValues((prev) => [...prev, value]);
+      }
+    }, 80);
+  };
+
+  useEffect(() => {
+    if (!hasRolled || rolling || animating || autoMoving || winner) return;
+    if (pendingValues.length === 0) return;
+    const value = pendingValues[pendingValues.length - 1];
+    evaluateRoll(value, pendingValues);
+  }, [hasRolled, pendingValues, coins, currentPlayer]);
+
+  const evaluateRoll = (value, allValues) => {
+    const board = boardCoins(currentPlayer);
+    const onBoardFlag = board.length > 0;
+
+    const movableForThisValue = {};
+    Object.entries(coins).forEach(([id, coin]) => {
+      if (coin.color !== currentPlayer || coin.finished) return;
+      if (coin.pathIndex === -1) {
+        if (!onBoardFlag && value === 1) movableForThisValue[id] = value;
+        if (onBoardFlag && ENTRY_VALUES.has(value)) movableForThisValue[id] = value;
+      } else {
+        const newIdx = coin.pathIndex + value;
+        if (newIdx < PATHS[currentPlayer].length) movableForThisValue[id] = value;
+      }
+    });
+
+    const movableAny = {};
+    Object.entries(coins).forEach(([id, coin]) => {
+      if (coin.color !== currentPlayer || coin.finished) return;
+      for (const v of allValues) {
+        if (coin.pathIndex === -1) {
+          if (!onBoardFlag && v === 1) { movableAny[id] = v; return; }
+          if (onBoardFlag && ENTRY_VALUES.has(v)) { movableAny[id] = v; return; }
+        } else {
+          const newIdx = coin.pathIndex + v;
+          if (newIdx < PATHS[currentPlayer].length) { movableAny[id] = v; return; }
+        }
+      }
+    });
+
+    const movableIdsAny = Object.keys(movableAny);
+    const movableIdsForValue = Object.keys(movableForThisValue);
+    const isBonus = BONUS_VALUES.has(value);
+
+    if (movableIdsAny.length === 0) {
+      if (isBonus) {
+        setMessage(`${COLORS[currentPlayer].label} rolled ${value} (bonus). No moves possible — roll again!`);
+        setHasRolled(false);
+        setDiceValue(null);
+      } else {
+        setMessage(`${COLORS[currentPlayer].label} rolled ${value} — no moves possible. Turn passes.`);
+        setTimeout(() => endTurn(), 700);
+      }
+      return;
+    }
+
+    const shouldAutoMove =
+      (allValues.length === 1 && movableIdsForValue.length === 1) ||
+      (movableIdsAny.length === 1);
+
+    if (shouldAutoMove) {
+      const coinId = movableIdsForValue.length === 1 ? movableIdsForValue[0] : movableIdsAny[0];
+      const stepsToMove = movableForThisValue[coinId] || movableAny[coinId];
+
+      let autoMsg = `${COLORS[currentPlayer].label} rolled ${value}. `;
+      if (movableIdsAny.length === 1) {
+        autoMsg += `Only one coin can move — auto-moving ${stepsToMove} step${stepsToMove > 1 ? "s" : ""}...`;
+      } else {
+        autoMsg += `Auto-moving ${stepsToMove} step${stepsToMove > 1 ? "s" : ""}...`;
+      }
+      setMessage(autoMsg);
+      setAutoMoving(true);
+      setTimeout(async () => {
+        await executeMove(coinId);
+        setAutoMoving(false);
+      }, 700);
+      return;
+    }
+
+    let msg = `${COLORS[currentPlayer].label} rolled ${value}.`;
+    if (isBonus) msg += " 🎲 Bonus turn!";
+    if (allValues.length > 1) msg += ` Pending: [${allValues.join(", ")}].`;
+    if (movableIdsForValue.length === 0) {
+      msg += ` Cannot use ${value} now. Click a glowing coin to use another pending value.`;
+    } else {
+      msg += ` ${movableIdsForValue.length} coins can move with ${value} — click a glowing coin.`;
+    }
+    setMessage(msg);
+  };
+
+  const executeMove = async (coinId) => {
+    const coin = coins[coinId];
+    if (!coin || coin.color !== currentPlayer || coin.finished) return;
+
+    const onBoardFlag = hasCoinOnBoard(currentPlayer);
+    let usedValue = null;
+    for (const v of pendingValues) {
+      if (coin.pathIndex === -1) {
+        if (!onBoardFlag && v === 1) { usedValue = v; break; }
+        if (onBoardFlag && ENTRY_VALUES.has(v)) { usedValue = v; break; }
+      } else {
+        const newIdx = coin.pathIndex + v;
+        if (newIdx < PATHS[currentPlayer].length) { usedValue = v; break; }
+      }
+    }
+    if (usedValue === null) {
+      setMessage("This coin can't move with current dice. Try a glowing one.");
+      return;
+    }
+
+    setAnimating(true);
+    let startIdx = coin.pathIndex;
+    let endIdx = coin.pathIndex === -1 ? 0 : coin.pathIndex + usedValue;
+
+    if (coin.pathIndex === -1) {
+      await new Promise((resolve) => {
+        setCoins((prev) => ({ ...prev, [coinId]: { ...prev[coinId], pathIndex: 0 } }));
+        setMessage(`${COLORS[currentPlayer].label} entered the board!`);
+        setTimeout(resolve, 350);
+      });
+      startIdx = 0;
+    }
+
+    const stepDelay = 280;
+    for (let step = startIdx + 1; step <= endIdx; step++) {
+      await new Promise((resolve) => {
+        setCoins((prev) => ({ ...prev, [coinId]: { ...prev[coinId], pathIndex: step } }));
+        const stepsLeft = endIdx - step;
+        setMessage(stepsLeft > 0 ? `Moving... ${stepsLeft} step${stepsLeft > 1 ? "s" : ""} to go` : `Moved ${usedValue} steps.`);
+        setTimeout(resolve, stepDelay);
+      });
+    }
+
+    const finalSquare = PATHS[currentPlayer][endIdx];
+    const finished = endIdx === PATHS[currentPlayer].length - 1;
+
+    let captured = false;
+    let capturedNames = [];
+    setCoins((prev) => {
+      const newCoins = { ...prev };
+      newCoins[coinId] = { ...newCoins[coinId], finished };
+      if (!SAFE_SQUARES.has(finalSquare) && !finished) {
+        Object.entries(newCoins).forEach(([id, c]) => {
+          if (c.color !== currentPlayer && !c.finished && c.pathIndex >= 0 && PATHS[c.color][c.pathIndex] === finalSquare) {
+            newCoins[id] = { ...c, pathIndex: -1 };
+            captured = true;
+            capturedNames.push(COLORS[c.color].label);
+          }
+        });
+      }
+      const finishedNow = Object.values(newCoins).filter((c) => c.color === currentPlayer && c.finished).length;
+      if (finishedNow === 6) {
+        setWinner(currentPlayer);
+        setMessage(`🎉 ${COLORS[currentPlayer].label} wins! All 6 coins reached the center!`);
+      }
+      return newCoins;
+    });
+
+    setAnimating(false);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    if (winner) return;
+
+    const remaining = [...pendingValues];
+    remaining.splice(remaining.indexOf(usedValue), 1);
+    setPendingValues(remaining);
+
+    let msg = `Moved ${usedValue} step${usedValue > 1 ? "s" : ""}.`;
+    if (captured) msg += ` 💥 Captured ${capturedNames.join(", ")}!`;
+    if (finished) msg += " ⭐ Reached center!";
+    if (SAFE_SQUARES.has(finalSquare) && !finished && coin.pathIndex !== -1) {
+      msg += " 🛡️ Safe on X.";
+    }
+
+    if (remaining.length > 0) {
+      msg += ` Remaining: [${remaining.join(", ")}].`;
+      setMessage(msg);
+    } else {
+      const lastRoll = diceValue;
+      if (BONUS_VALUES.has(lastRoll) || captured || finished) {
+        msg += " Roll again!";
+        setMessage(msg);
+        setHasRolled(false);
+        setDiceValue(null);
+      } else {
+        msg += " Turn ends.";
+        setMessage(msg);
+        setTimeout(() => endTurn(), 600);
+      }
+    }
+  };
+
+  const handleCoinClick = (coinId) => {
+    if (!hasRolled || rolling || winner || autoMoving || animating) return;
+    if (!(coinId in getMovableCoins)) {
+      setMessage("That coin can't move now. Click a glowing coin.");
+      return;
+    }
+    executeMove(coinId);
+  };
+
+  const endTurn = () => {
+    const idx = PLAYER_ORDER.indexOf(currentPlayer);
+    const next = PLAYER_ORDER[(idx + 1) % 4];
+    setCurrentPlayer(next);
+    setDiceValue(null);
+    setDice([null, null]);
+    setHasRolled(false);
+    setPendingValues([]);
+    setMessage(`${COLORS[next].label}'s turn. Roll the dice.`);
+  };
+
+  const renderCell = (r, c) => {
+    const key = `${r},${c}`;
+    const isCenter = key === CENTER;
+    const isEntry = key in ENTRY_COLOR_MAP;
+    const entryColor = ENTRY_COLOR_MAP[key];
+    const isCornerSafe = ["1,1", "1,5", "5,1", "5,5"].includes(key);
+    const isSafe = SAFE_SQUARES.has(key);
+
+    const coinsHere = Object.entries(coins).filter(([_, coin]) => {
+      if (coin.pathIndex < 0 || coin.finished) return false;
+      return PATHS[coin.color][coin.pathIndex] === key;
+    });
+    const finishedHere = isCenter ? Object.entries(coins).filter(([_, coin]) => coin.finished) : [];
+
+    let bg = "#FAFAFA";
+    if (isEntry) bg = COLORS[entryColor].main;
+    else if (isCenter) bg = "#9E9E9E";
+    else if (isSafe || isCornerSafe) bg = "#E8F5E9";
+
+    const hasAnimatingCoin = animating && coinsHere.some(([_, c]) => c.color === currentPlayer);
+
+    const cellStyle = {
+      background: bg,
+      boxShadow: hasAnimatingCoin
+        ? `inset 0 0 0 3px ${COLORS[currentPlayer].main}, 0 0 12px ${COLORS[currentPlayer].main}`
+        : "none",
+      zIndex: hasAnimatingCoin ? 5 : 1,
+    };
+
+    return (
+      <div key={key} className="cell" style={cellStyle}>
+        {(isSafe || isCornerSafe) && (
+          <span className="x-mark" style={{
+            color: isEntry || isCenter ? "rgba(0,0,0,0.85)" : "#1B5E20",
+            textShadow: isEntry || isCenter ? "none" : "0 0 2px rgba(255,255,255,0.5)",
+          }}>X</span>
+        )}
+
+        {coinsHere.length > 0 && (
+          <div className="coin-stack">
+            {coinsHere.slice(0, 4).map(([id, coin]) => {
+              const isMovable = id in getMovableCoins;
+              const sz = coinsHere.length > 1 ? "45%" : "75%";
+              return (
+                <button
+                  key={id}
+                  onClick={() => handleCoinClick(id)}
+                  className={`coin ${isMovable ? "pulse" : ""}`}
+                  style={{
+                    width: sz,
+                    height: sz,
+                    background: `radial-gradient(circle at 30% 30%, ${COLORS[coin.color].light}, ${COLORS[coin.color].main} 60%, ${COLORS[coin.color].dark})`,
+                    border: `1.5px solid ${COLORS[coin.color].dark}`,
+                    boxShadow: isMovable
+                      ? `0 0 0 2px white, 0 0 8px 3px ${COLORS[coin.color].main}`
+                      : "0 1px 2px rgba(0,0,0,0.3)",
+                    transform: isMovable ? "scale(1.1)" : "scale(1)",
+                  }}
+                />
+              );
+            })}
+            {coinsHere.length > 4 && (
+              <span style={{position:"absolute", fontSize:"8px", fontWeight:700, color:"white"}}>
+                +{coinsHere.length - 4}
+              </span>
+            )}
+          </div>
+        )}
+
+        {isCenter && finishedHere.length > 0 && coinsHere.length === 0 && (
+          <div style={{position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center"}}>
+            <span style={{color:"white", fontSize:"12px", fontWeight:700}}>⭐{finishedHere.length}</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const Pawn = ({ color, id, size = 20 }) => {
+    const isMovable = id in getMovableCoins;
+    return (
+      <button
+        onClick={() => id && handleCoinClick(id)}
+        className={isMovable ? "pawn-pulse" : ""}
+        style={{
+          position: "relative",
+          width: `${size}px`,
+          height: `${size * 1.4}px`,
+          transition: "all 0.2s",
+          transform: isMovable ? "scale(1.15)" : "scale(1)",
+          filter: isMovable
+            ? `drop-shadow(0 0 4px ${COLORS[color].main}) drop-shadow(0 0 2px white)`
+            : "drop-shadow(0 1px 1px rgba(0,0,0,0.3))",
+        }}
+      >
+        <svg viewBox="0 0 20 28" width="100%" height="100%">
+          <ellipse cx="10" cy="6" rx="5" ry="5" fill={COLORS[color].main} stroke={COLORS[color].dark} strokeWidth="0.5"/>
+          <path d="M 6 11 Q 6 13 7 14 L 13 14 Q 14 13 14 11 Z" fill={COLORS[color].dark}/>
+          <path d="M 7 14 L 6 22 L 14 22 L 13 14 Z" fill={COLORS[color].main} stroke={COLORS[color].dark} strokeWidth="0.4"/>
+          <ellipse cx="10" cy="22" rx="6" ry="2" fill={COLORS[color].dark}/>
+          <ellipse cx="10" cy="22" rx="6" ry="1.5" fill={COLORS[color].main}/>
+          <ellipse cx="8.5" cy="4.5" rx="1.2" ry="1.5" fill="rgba(255,255,255,0.4)"/>
+        </svg>
+      </button>
+    );
+  };
+
+  const renderYard = (color) => {
+    const yc = yardCoins(color);
+    const finished = finishedCount(color);
+    const isCurrent = color === currentPlayer;
+    return (
+      <div className={`yard ${isCurrent ? "current" : ""}`} style={{
+        background: isCurrent ? COLORS[color].light : "transparent",
+      }}>
+        <div className="yard-label" style={{ color: COLORS[color].dark }}>
+          {COLORS[color].label}
+        </div>
+        <div className="yard-grid">
+          {yc.map(([id]) => <Pawn key={id} color={color} id={id} size={18} />)}
+          {Array.from({ length: 6 - yc.length - finished }).map((_, i) => (
+            <div key={`e-${i}`} style={{ width: "18px", height: "25px", opacity: 0.15 }}>
+              <svg viewBox="0 0 20 28" width="100%" height="100%">
+                <ellipse cx="10" cy="6" rx="5" ry="5" fill="none" stroke={COLORS[color].dark} strokeWidth="0.8" strokeDasharray="2"/>
+                <path d="M 7 14 L 6 22 L 14 22 L 13 14 Z" fill="none" stroke={COLORS[color].dark} strokeWidth="0.6" strokeDasharray="2"/>
+              </svg>
+            </div>
+          ))}
+        </div>
+        <div className="yard-finished" style={{ color: COLORS[color].dark }}>
+          ⭐ {finished}/6
+        </div>
+      </div>
+    );
+  };
+
+  const StickDie = ({ value }) => {
+    if (value === null) {
+      return <div className="stick-die stick-die-empty"></div>;
+    }
+    const dots = [];
+    for (let i = 0; i < value; i++) {
+      dots.push(<div key={i} className="stick-dot"></div>);
+    }
+    return (
+      <div className="stick-die stick-die-rolled">
+        {value === 0 ? <span style={{fontSize:"8px", color:"#44403C", fontWeight:700}}>FLAT</span> : dots}
+      </div>
+    );
+  };
+
+  return (
+    <div className="app-root">
+      <div className="title">
+        <h1>தாயம் · Thaayam</h1>
+        <p>Traditional Tamil Board Game</p>
+      </div>
+
+      <div className="board-area">
+        {renderYard("green")}
+
+        <div className="middle-row">
+          {renderYard("red")}
+          <div className="board">
+            <div className="board-grid">
+              {Array.from({ length: 7 }, (_, r) =>
+                Array.from({ length: 7 }, (_, c) => renderCell(r, c))
+              )}
+            </div>
+          </div>
+          {renderYard("yellow")}
+        </div>
+
+        {renderYard("blue")}
+      </div>
+
+      <div className="controls">
+        <div className="turn-pill" style={{ background: COLORS[currentPlayer].main }}>
+          {COLORS[currentPlayer].name} · {COLORS[currentPlayer].label}'s Turn
+        </div>
+
+        <div className="dice-row">
+          <div style={{display:"flex", flexDirection:"column", gap:"6px"}}>
+            <StickDie value={dice[0]} />
+            <StickDie value={dice[1]} />
+          </div>
+
+          <div className="total-box">
+            <div className="total-label">Total</div>
+            <div className="total-value" style={{
+              color: COLORS[currentPlayer].main,
+              border: `2px solid ${COLORS[currentPlayer].main}`,
+            }}>
+              {diceValue ?? "—"}
+            </div>
+          </div>
+
+          <button
+            onClick={rollDice}
+            disabled={rolling || hasRolled || winner || autoMoving || animating}
+            className="roll-button"
+            style={{
+              background: `linear-gradient(135deg, ${COLORS[currentPlayer].main}, ${COLORS[currentPlayer].dark})`,
+            }}
+          >
+            {rolling ? "..." : animating ? "Moving" : autoMoving ? "Auto" : "Roll"}
+          </button>
+        </div>
+
+        <div className="message-box">{message}</div>
+
+        {pendingValues.length > 0 && (
+          <div className="pending-box">
+            Pending values: <strong>[{pendingValues.join(", ")}]</strong>
+          </div>
+        )}
+
+        {winner && (
+          <button
+            onClick={() => window.location.reload()}
+            className="play-again bounce"
+            style={{ background: COLORS[winner].main }}
+          >
+            🎉 Play Again
+          </button>
+        )}
+
+        <div className="legend">
+          🎲 Bonus on 1, 5, 6, 12 · ✨ Glowing coins can move · ⚡ Auto-move when only one option · 🛡️ Coins on <strong>X</strong> squares are SAFE — cannot be captured
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<ThaayamGame />);
+
+requestAnimationFrame(() => {
+  setTimeout(() => {
+    const loader = document.getElementById("loading");
+    if (loader) {
+      loader.classList.add("hide");
+      setTimeout(() => loader.remove(), 500);
+    }
+  }, 100);
+});
+</script>
+</body>
+</html>
