@@ -423,10 +423,6 @@
     flex-shrink: 0;
     transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .board.rot-0    { transform: rotate(0deg); }
-  .board.rot-90   { transform: rotate(90deg); }
-  .board.rot-180  { transform: rotate(180deg); }
-  .board.rot-270  { transform: rotate(270deg); }
 
   /* Counter-rotate cell contents so coins/X stay upright */
   .cell-content-wrap {
@@ -436,11 +432,8 @@
     align-items: center;
     justify-content: center;
     transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: var(--counter-rotate, rotate(0deg));
   }
-  .board.rot-0   .cell-content-wrap { transform: rotate(0deg); }
-  .board.rot-90  .cell-content-wrap { transform: rotate(-90deg); }
-  .board.rot-180 .cell-content-wrap { transform: rotate(-180deg); }
-  .board.rot-270 .cell-content-wrap { transform: rotate(-270deg); }
   .board-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -1570,7 +1563,13 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
         {renderYard(yardSlots.top)}
         <div className="middle-row">
           <div className="left-yard-slot">{renderYard(yardSlots.left)}</div>
-          <div className={`board rot-${myRotation}`}>
+          <div
+            className="board"
+            style={{
+              transform: `rotate(${myRotation}deg)`,
+              "--counter-rotate": `rotate(${-myRotation}deg)`,
+            }}
+          >
             <div className="board-grid">
               {Array.from({ length: 7 }, (_, r) =>
                 Array.from({ length: 7 }, (_, c) => renderCell(r, c))
