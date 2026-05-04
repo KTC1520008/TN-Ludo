@@ -3,16 +3,17 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>தாயம் · Thaayam</title>
+<title>தாயம் · Thaayam Online</title>
 
-<!-- React + ReactDOM via CDN -->
+<!-- React + ReactDOM -->
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-
-<!-- Babel for in-browser JSX compilation -->
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-<!-- Fonts -->
+<!-- Firebase (compat SDK for simplicity in CDN setup) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Noto+Sans+Tamil:wght@400;700&display=swap" rel="stylesheet">
@@ -20,49 +21,225 @@
 <style>
   * { box-sizing: border-box; }
   html, body {
-    margin: 0;
-    padding: 0;
+    margin: 0; padding: 0;
     overscroll-behavior: none;
     -webkit-tap-highlight-color: transparent;
     font-family: 'Cormorant Garamond', Georgia, serif;
   }
   button { font-family: inherit; cursor: pointer; border: none; background: none; padding: 0; }
   button:disabled { cursor: not-allowed; }
+  input { font-family: inherit; }
 
-  @keyframes coinPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-  }
-  .pulse { animation: coinPulse 1s ease-in-out infinite; }
-  .pawn-pulse { animation: coinPulse 1s ease-in-out infinite; }
-
-  @keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
-  }
+  @keyframes coinPulse { 0%,100% { opacity:1; } 50% { opacity:0.7; } }
+  .pulse, .pawn-pulse { animation: coinPulse 1s ease-in-out infinite; }
+  @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
   .bounce { animation: bounce 0.8s ease-in-out infinite; }
-
-  #loading {
-    position: fixed; inset: 0;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    background: linear-gradient(180deg, #FFF59D 0%, #FBC02D 100%);
-    z-index: 9999;
-    transition: opacity 0.4s;
-  }
-  #loading.hide { opacity: 0; pointer-events: none; }
-  #loading h1 { font-size: 2.5rem; color: #5D4037; margin: 0; font-family: 'Noto Sans Tamil', serif; }
-  #loading p { color: #6D4C41; margin-top: 0.5rem; font-size: 0.9rem; letter-spacing: 0.2em; }
+  @keyframes spin { to { transform: rotate(360deg); } }
   .spinner {
     width: 40px; height: 40px;
     border: 4px solid #FBC02D;
     border-top: 4px solid #5D4037;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
-    margin-top: 1.5rem;
   }
-  @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ---- Lobby / Waiting Room screens ---- */
+  .screen {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: linear-gradient(180deg, #FFF59D 0%, #FBC02D 100%);
+  }
+  .lobby-card {
+    background: white;
+    padding: 28px 24px;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    max-width: 380px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .lobby-title {
+    font-size: 36px;
+    font-weight: 700;
+    color: #3E2723;
+    text-align: center;
+    margin: 0;
+    font-family: 'Noto Sans Tamil', 'Cormorant Garamond', serif;
+  }
+  .lobby-subtitle {
+    text-align: center;
+    color: #6D4C41;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin: -8px 0 8px;
+  }
+  .lobby-input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 2px solid #FBC02D;
+    background: #FFFDE7;
+    font-size: 16px;
+    color: #3E2723;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .lobby-input:focus { border-color: #F57F17; }
+  .lobby-input.code-input {
+    text-align: center;
+    font-size: 28px;
+    letter-spacing: 0.5em;
+    font-weight: 700;
+    padding-left: 0.5em; /* offset the letter-spacing */
+  }
+  .lobby-button {
+    width: 100%;
+    padding: 14px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 700;
+    font-size: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: transform 0.15s;
+    letter-spacing: 0.5px;
+  }
+  .lobby-button:not(:disabled):hover { transform: scale(1.02); }
+  .lobby-button:not(:disabled):active { transform: scale(0.98); }
+  .lobby-button:disabled { opacity: 0.5; }
+  .btn-create { background: linear-gradient(135deg, #43A047, #1B5E20); }
+  .btn-join { background: linear-gradient(135deg, #1E88E5, #0D47A1); }
+  .btn-back { background: linear-gradient(135deg, #757575, #424242); padding: 10px; font-size: 14px; }
+  .btn-start { background: linear-gradient(135deg, #FF6F00, #E65100); }
+
+  .divider {
+    text-align: center;
+    color: #9E9E9E;
+    font-size: 12px;
+    letter-spacing: 0.3em;
+    margin: 4px 0;
+    position: relative;
+  }
+  .divider::before, .divider::after {
+    content: ""; position: absolute; top: 50%;
+    width: 35%; height: 1px; background: #E0E0E0;
+  }
+  .divider::before { left: 0; }
+  .divider::after { right: 0; }
+
+  .room-code-display {
+    text-align: center;
+    background: #FFFDE7;
+    border: 2px dashed #FBC02D;
+    padding: 18px;
+    border-radius: 12px;
+  }
+  .room-code-label {
+    font-size: 11px;
+    color: #6D4C41;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin: 0 0 6px;
+  }
+  .room-code-value {
+    font-size: 48px;
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    color: #3E2723;
+    font-family: Arial Black, Arial, sans-serif;
+    margin: 0;
+  }
+  .room-code-hint {
+    font-size: 11px;
+    color: #6D4C41;
+    margin-top: 8px;
+  }
+
+  .player-list {
+    background: #F5F5F5;
+    padding: 12px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .player-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: white;
+    border-radius: 6px;
+    border-left: 4px solid #ccc;
+    font-size: 14px;
+  }
+  .player-color-dot {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .player-name { font-weight: 600; color: #3E2723; flex: 1; }
+  .player-role { font-size: 10px; color: #757575; text-transform: uppercase; letter-spacing: 0.1em; }
+  .you-badge {
+    background: #FBC02D;
+    color: #3E2723;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+  }
+
+  .error-msg {
+    background: #FFEBEE;
+    color: #C62828;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    text-align: center;
+    border: 1px solid #FFCDD2;
+  }
+  .info-msg {
+    background: #E3F2FD;
+    color: #1565C0;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    text-align: center;
+    border: 1px solid #BBDEFB;
+  }
+
+  /* Connection status indicator */
+  .conn-status {
+    position: fixed;
+    top: 8px; right: 8px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .conn-status.online { background: #E8F5E9; color: #1B5E20; }
+  .conn-status.offline { background: #FFEBEE; color: #B71C1C; }
+  .conn-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  /* ---- Game screen ---- */
   .app-root {
     min-height: 100vh;
     width: 100%;
@@ -72,7 +249,6 @@
     padding: 12px;
     background: linear-gradient(180deg, #FFF59D 0%, #FBC02D 100%);
   }
-
   .title { text-align: center; margin-bottom: 8px; }
   .title h1 {
     font-size: clamp(22px, 5vw, 32px);
@@ -89,8 +265,19 @@
     color: #5D4037;
     margin: 2px 0 0;
   }
+  .room-info-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.7);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    color: #3E2723;
+    margin-top: 4px;
+  }
+  .room-info-bar strong { font-family: Arial Black; letter-spacing: 0.1em; }
 
-  /* Default: side-by-side yards (desktop / tablet landscape) */
   .board-area {
     display: flex;
     flex-direction: column;
@@ -115,14 +302,33 @@
     padding: 6px 8px;
     border-radius: 8px;
     transition: all 0.2s;
+    position: relative;
   }
   .yard.current {
     box-shadow: 0 0 0 2px white, 0 0 0 4px rgba(0,0,0,0.05);
+  }
+  .yard.assigned {
+    box-shadow: 0 0 0 3px #FBC02D, 0 0 0 5px rgba(0,0,0,0.05);
+  }
+  .yard.assigned.current {
+    box-shadow: 0 0 0 3px #FBC02D, 0 0 0 6px white, 0 0 0 8px rgba(0,0,0,0.1);
   }
   .yard-label {
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 1px;
+  }
+  .yard-name-tag {
+    font-size: 9px;
+    color: #424242;
+    background: rgba(255,255,255,0.8);
+    padding: 1px 6px;
+    border-radius: 999px;
+    margin-top: 2px;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .yard-grid {
     display: grid;
@@ -145,69 +351,6 @@
     box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     flex-shrink: 0;
   }
-
-  /* ============================================================
-     MOBILE LAYOUT — keep the same 4-side yard layout, just smaller
-     ============================================================ */
-  @media (max-width: 900px) {
-    .app-root {
-      padding: 6px;
-    }
-
-    /* Smaller board so RED + BOARD + YELLOW fits in screen width */
-    .board {
-      width: min(62vw, 320px);
-      padding: 4px;
-      border-width: 3px;
-    }
-
-    /* Tighter spacing on mobile */
-    .middle-row {
-      gap: 2px;
-    }
-
-    .board-area {
-      gap: 2px;
-    }
-
-    /* Compact yards */
-    .yard {
-      padding: 4px 6px;
-      gap: 3px;
-    }
-    .yard-grid {
-      gap: 2px;
-    }
-    .yard-label {
-      font-size: 9px;
-    }
-    .yard-finished {
-      font-size: 8px;
-    }
-
-    .controls {
-      max-width: 100%;
-      margin-top: 8px;
-    }
-  }
-
-  /* Smaller pawns in yards on mobile */
-  @media (max-width: 900px) {
-    .yard-grid svg {
-      width: 16px !important;
-    }
-  }
-
-  /* For very small phones (≤380px) */
-  @media (max-width: 380px) {
-    .board {
-      width: 58vw;
-    }
-    .yard {
-      padding: 3px 4px;
-    }
-  }
-
   .board-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -269,6 +412,16 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     font-family: 'Noto Sans Tamil', 'Cormorant Garamond', serif;
   }
+  .your-turn-banner {
+    background: linear-gradient(90deg, #FFD600, #FFAB00);
+    color: #3E2723;
+    padding: 6px 18px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  }
   .dice-row {
     display: flex;
     align-items: center;
@@ -292,18 +445,12 @@
   .stick-die-empty { background: linear-gradient(180deg, #d4af37, #b8941f); }
   .stick-die-rolled { background: linear-gradient(180deg, #f4d27a, #d4af37); }
   .stick-dot {
-    width: 8px;
-    height: 8px;
+    width: 8px; height: 8px;
     border-radius: 50%;
     background: #3a2510;
     box-shadow: inset 0 1px 1px rgba(0,0,0,0.4);
   }
-  .total-box {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-  }
+  .total-box { display: flex; flex-direction: column; align-items: center; gap: 2px; }
   .total-label {
     font-size: 10px;
     color: #57534E;
@@ -312,8 +459,7 @@
     font-weight: 700;
   }
   .total-value {
-    width: 64px;
-    height: 64px;
+    width: 64px; height: 64px;
     border-radius: 10px;
     display: flex;
     align-items: center;
@@ -380,20 +526,73 @@
     box-shadow: 0 6px 16px rgba(0,0,0,0.2);
     font-size: 14px;
   }
+  .leave-room-btn {
+    margin-top: 8px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    background: rgba(0,0,0,0.1);
+    color: #5D4037;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+  }
+
+  /* Mobile layout */
+  @media (max-width: 900px) {
+    .app-root { padding: 6px; }
+    .board { width: min(62vw, 320px); padding: 4px; border-width: 3px; }
+    .middle-row { gap: 2px; }
+    .board-area { gap: 2px; }
+    .yard { padding: 4px 6px; gap: 3px; }
+    .yard-grid { gap: 2px; }
+    .yard-label { font-size: 9px; }
+    .yard-finished { font-size: 8px; }
+    .yard-name-tag { font-size: 8px; max-width: 60px; }
+    .yard-grid svg { width: 16px !important; }
+    .controls { max-width: 100%; margin-top: 8px; }
+  }
+  @media (max-width: 380px) {
+    .board { width: 58vw; }
+    .yard { padding: 3px 4px; }
+  }
 </style>
 </head>
 <body>
 
-<div id="loading">
-  <h1>தாயம்</h1>
-  <p>THAAYAM · LOADING</p>
-  <div class="spinner"></div>
-</div>
-
 <div id="root"></div>
 
 <script type="text/babel" data-presets="react,env">
-const { useState, useEffect, useMemo } = React;
+const { useState, useEffect, useMemo, useRef } = React;
+
+// ============================================================
+// FIREBASE CONFIG — REPLACE THIS WITH YOUR OWN CONFIG
+// Get these values from: Firebase Console → Project Settings → Your apps → Web
+// ============================================================
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyC8SeK8Uqt6SJbZp2tt6s8g5bh-IEssnoU",
+  authDomain: "tn-ludo-ed14e.firebaseapp.com",
+  databaseURL: "https://tn-ludo-ed14e-default-rtdb.firebaseio.com/",
+  projectId: "tn-ludo-ed14e",
+  storageBucket: "tn-ludo-ed14e.firebasestorage.app",
+  messagingSenderId: "837713977634",
+  appId: "1:837713977634:web:471913b9cd4743f09c457b"
+};
+
+// Initialize Firebase
+let firebaseReady = false;
+let db = null;
+try {
+  if (FIREBASE_CONFIG.apiKey !== "PASTE_YOUR_API_KEY_HERE") {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.database();
+    firebaseReady = true;
+  }
+} catch (e) {
+  console.error("Firebase init error:", e);
+}
+
+// ============================================================
+// CONSTANTS
+// ============================================================
 
 const COLORS = {
   red:    { main: "#E53935", light: "#FFCDD2", dark: "#B71C1C", name: "சிவப்பு", label: "RED" },
@@ -434,7 +633,6 @@ const OUTER = outerRingCounterClockwise();
 const MIDDLE = middleRingCounterClockwise();
 const INNER = innerRingCounterClockwise();
 const CENTER = "3,3";
-
 const ENTRY_SQUARE_V2 = { green: "0,3", red: "3,0", yellow: "3,6", blue: "6,3" };
 
 function rotateRing(ring, startSquare) {
@@ -442,7 +640,6 @@ function rotateRing(ring, startSquare) {
   if (i === -1) return ring;
   return [...ring.slice(i), ...ring.slice(0, i)];
 }
-
 function buildPath(color) {
   const start = ENTRY_SQUARE_V2[color];
   const outer = rotateRing(OUTER, start);
@@ -452,56 +649,338 @@ function buildPath(color) {
   const inner = rotateRing(INNER, innerEntry);
   return [...outer, ...middle, ...inner, CENTER];
 }
-
 const PATHS = {
   red: buildPath("red"), green: buildPath("green"),
   yellow: buildPath("yellow"), blue: buildPath("blue"),
 };
-
 const SAFE_SQUARES = new Set([
   "0,3", "3,0", "6,3", "3,6",
   "1,1", "1,5", "5,1", "5,5",
   "3,3",
 ]);
-
 const ENTRY_COLOR_MAP = { "0,3": "green", "3,0": "red", "3,6": "yellow", "6,3": "blue" };
 
-function ThaayamGame() {
-  const [coins, setCoins] = useState(() => {
-    const c = {};
-    Object.keys(COLORS).forEach((color) => {
-      for (let i = 0; i < 6; i++) {
-        c[`${color}-${i}`] = { color, pathIndex: -1, finished: false };
-      }
-    });
-    return c;
+function makeInitialCoins() {
+  const c = {};
+  Object.keys(COLORS).forEach((color) => {
+    for (let i = 0; i < 6; i++) {
+      c[`${color}-${i}`] = { color, pathIndex: -1, finished: false };
+    }
   });
+  return c;
+}
 
-  const [currentPlayer, setCurrentPlayer] = useState("red");
-  const [dice, setDice] = useState([null, null]);
-  const [diceValue, setDiceValue] = useState(null);
+function generateRoomCode() {
+  return Math.floor(1000 + Math.random() * 9000).toString();
+}
+
+function generatePlayerId() {
+  return 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+}
+
+// ============================================================
+// LOBBY COMPONENT
+// ============================================================
+
+function Lobby({ onJoinRoom }) {
+  const [mode, setMode] = useState("home"); // home | create | join
+  const [name, setName] = useState(localStorage.getItem("thaayam_name") || "");
+  const [code, setCode] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const saveName = (n) => {
+    setName(n);
+    localStorage.setItem("thaayam_name", n);
+  };
+
+  const handleCreate = async () => {
+    setError("");
+    if (!name.trim()) { setError("Please enter your name"); return; }
+    if (!firebaseReady) { setError("Firebase not configured. Please add config in the HTML file."); return; }
+    setBusy(true);
+    try {
+      // Generate unique room code (try a few times if collision)
+      let roomCode;
+      for (let i = 0; i < 5; i++) {
+        roomCode = generateRoomCode();
+        const snap = await db.ref(`rooms/${roomCode}`).once("value");
+        if (!snap.exists()) break;
+      }
+      const playerId = generatePlayerId();
+      const roomData = {
+        host: playerId,
+        status: "waiting", // waiting | playing | finished
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+        players: {
+          [playerId]: {
+            name: name.trim(),
+            color: "red",
+            joinedAt: firebase.database.ServerValue.TIMESTAMP,
+            online: true,
+          }
+        },
+        gameState: null,
+      };
+      await db.ref(`rooms/${roomCode}`).set(roomData);
+      // Set onDisconnect to mark offline
+      db.ref(`rooms/${roomCode}/players/${playerId}/online`).onDisconnect().set(false);
+      onJoinRoom(roomCode, playerId, "red");
+    } catch (e) {
+      console.error(e);
+      setError("Failed to create room: " + e.message);
+    }
+    setBusy(false);
+  };
+
+  const handleJoin = async () => {
+    setError("");
+    if (!name.trim()) { setError("Please enter your name"); return; }
+    if (!/^\d{4}$/.test(code)) { setError("Enter a 4-digit room code"); return; }
+    if (!firebaseReady) { setError("Firebase not configured. Please add config in the HTML file."); return; }
+    setBusy(true);
+    try {
+      const snap = await db.ref(`rooms/${code}`).once("value");
+      if (!snap.exists()) { setError("Room not found"); setBusy(false); return; }
+      const room = snap.val();
+      if (room.status === "playing") { setError("Game already in progress"); setBusy(false); return; }
+      if (room.status === "finished") { setError("This game has already ended"); setBusy(false); return; }
+
+      const usedColors = new Set(Object.values(room.players || {}).map(p => p.color));
+      const availableColor = PLAYER_ORDER.find(c => !usedColors.has(c));
+      if (!availableColor) { setError("Room is full (4 players max)"); setBusy(false); return; }
+
+      const playerId = generatePlayerId();
+      await db.ref(`rooms/${code}/players/${playerId}`).set({
+        name: name.trim(),
+        color: availableColor,
+        joinedAt: firebase.database.ServerValue.TIMESTAMP,
+        online: true,
+      });
+      db.ref(`rooms/${code}/players/${playerId}/online`).onDisconnect().set(false);
+      onJoinRoom(code, playerId, availableColor);
+    } catch (e) {
+      console.error(e);
+      setError("Failed to join: " + e.message);
+    }
+    setBusy(false);
+  };
+
+  if (!firebaseReady) {
+    return (
+      <div className="screen">
+        <div className="lobby-card">
+          <h1 className="lobby-title">தாயம்</h1>
+          <p className="lobby-subtitle">Setup Required</p>
+          <div className="error-msg" style={{textAlign:"left", lineHeight: 1.5}}>
+            <strong>Firebase not configured.</strong><br/><br/>
+            To enable online multiplayer, you need to:<br/>
+            1. Create a free Firebase project at <strong>console.firebase.google.com</strong><br/>
+            2. Enable Realtime Database (test mode)<br/>
+            3. Open this HTML file<br/>
+            4. Find <strong>FIREBASE_CONFIG</strong> in the script<br/>
+            5. Paste your config values<br/>
+            6. Save and reload
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === "home") {
+    return (
+      <div className="screen">
+        <div className="lobby-card">
+          <h1 className="lobby-title">தாயம் · Thaayam</h1>
+          <p className="lobby-subtitle">Online Multiplayer</p>
+          <input
+            className="lobby-input"
+            placeholder="Your name"
+            value={name}
+            onChange={(e) => saveName(e.target.value)}
+            maxLength={20}
+          />
+          <button className="lobby-button btn-create" onClick={() => { if (name.trim()) setMode("create"); else setError("Enter your name first"); }}>
+            🎲 Create Room
+          </button>
+          <div className="divider">OR</div>
+          <button className="lobby-button btn-join" onClick={() => { if (name.trim()) setMode("join"); else setError("Enter your name first"); }}>
+            🔗 Join Room
+          </button>
+          {error && <div className="error-msg">{error}</div>}
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === "create") {
+    return (
+      <div className="screen">
+        <div className="lobby-card">
+          <h1 className="lobby-title">Create Room</h1>
+          <div className="info-msg">Welcome, <strong>{name}</strong>! Click below to create a room and get a 4-digit code to share.</div>
+          <button className="lobby-button btn-create" onClick={handleCreate} disabled={busy}>
+            {busy ? "Creating..." : "🎲 Create Now"}
+          </button>
+          {error && <div className="error-msg">{error}</div>}
+          <button className="lobby-button btn-back" onClick={() => { setMode("home"); setError(""); }}>
+            ← Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === "join") {
+    return (
+      <div className="screen">
+        <div className="lobby-card">
+          <h1 className="lobby-title">Join Room</h1>
+          <p className="lobby-subtitle">Enter 4-Digit Code</p>
+          <input
+            className="lobby-input code-input"
+            placeholder="0000"
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            maxLength={4}
+            inputMode="numeric"
+          />
+          <button className="lobby-button btn-join" onClick={handleJoin} disabled={busy || code.length !== 4}>
+            {busy ? "Joining..." : "🔗 Join"}
+          </button>
+          {error && <div className="error-msg">{error}</div>}
+          <button className="lobby-button btn-back" onClick={() => { setMode("home"); setError(""); }}>
+            ← Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// ============================================================
+// WAITING ROOM
+// ============================================================
+
+function WaitingRoom({ roomCode, playerId, room, onStart, onLeave }) {
+  const isHost = room.host === playerId;
+  const players = Object.entries(room.players || {});
+  const me = room.players[playerId];
+  const canStart = isHost && players.length >= 2;
+
+  const handleStart = async () => {
+    const initialState = {
+      coins: makeInitialCoins(),
+      currentPlayer: PLAYER_ORDER.find(c => players.some(([_, p]) => p.color === c)),
+      dice: [null, null],
+      diceValue: null,
+      hasRolled: false,
+      pendingValues: [],
+      message: "Game started! First coin needs a 1 to enter.",
+      winner: null,
+      lastMoveBy: null,
+      moveCounter: 0,
+    };
+    await db.ref(`rooms/${roomCode}/gameState`).set(initialState);
+    await db.ref(`rooms/${roomCode}/status`).set("playing");
+  };
+
+  return (
+    <div className="screen">
+      <div className="lobby-card">
+        <h1 className="lobby-title">Waiting Room</h1>
+        <div className="room-code-display">
+          <p className="room-code-label">Room Code</p>
+          <p className="room-code-value">{roomCode}</p>
+          <p className="room-code-hint">Share this code with friends to join</p>
+        </div>
+
+        <div className="player-list">
+          {players.map(([pid, p]) => (
+            <div key={pid} className="player-item" style={{borderLeftColor: COLORS[p.color].main}}>
+              <div className="player-color-dot" style={{background: COLORS[p.color].main}} />
+              <span className="player-name">{p.name}</span>
+              {pid === playerId && <span className="you-badge">YOU</span>}
+              {pid === room.host && <span className="player-role">HOST</span>}
+              {!p.online && <span className="player-role" style={{color:"#C62828"}}>OFFLINE</span>}
+            </div>
+          ))}
+          {Array.from({ length: 4 - players.length }).map((_, i) => (
+            <div key={`waiting-${i}`} className="player-item" style={{opacity:0.5, borderLeftColor:"#ccc"}}>
+              <div className="player-color-dot" style={{background:"#E0E0E0"}} />
+              <span className="player-name" style={{fontStyle:"italic", color:"#9E9E9E"}}>Waiting for player...</span>
+            </div>
+          ))}
+        </div>
+
+        {isHost ? (
+          <button className="lobby-button btn-start" onClick={handleStart} disabled={!canStart}>
+            {players.length < 2 ? "Need at least 2 players" : `▶️ Start Game (${players.length} players)`}
+          </button>
+        ) : (
+          <div className="info-msg">Waiting for host to start the game...</div>
+        )}
+
+        <button className="lobby-button btn-back" onClick={onLeave}>
+          ← Leave Room
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// GAME COMPONENT (multiplayer)
+// ============================================================
+
+function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
+  const players = room.players || {};
+  const me = players[playerId];
+  const myColor = me?.color;
+  const gs = room.gameState || {};
+
+  // Local UI state (not synced)
   const [rolling, setRolling] = useState(false);
-  const [hasRolled, setHasRolled] = useState(false);
-  const [pendingValues, setPendingValues] = useState([]);
-  const [message, setMessage] = useState("Roll the dice! First coin needs a 1 to enter.");
-  const [winner, setWinner] = useState(null);
-  const [autoMoving, setAutoMoving] = useState(false);
   const [animating, setAnimating] = useState(false);
+  const [autoMoving, setAutoMoving] = useState(false);
+  const [localDice, setLocalDice] = useState([null, null]);
 
-  const hasCoinOnBoard = (color, coinsState = coins) =>
-    Object.values(coinsState).some((c) => c.color === color && c.pathIndex >= 0 && !c.finished);
+  // Server state (single source of truth)
+  const coins = gs.coins || makeInitialCoins();
+  const currentPlayer = gs.currentPlayer || "red";
+  const dice = gs.dice || [null, null];
+  const diceValue = gs.diceValue;
+  const hasRolled = gs.hasRolled || false;
+  const pendingValues = gs.pendingValues || [];
+  const message = gs.message || "";
+  const winner = gs.winner;
+
+  const isMyTurn = myColor === currentPlayer;
+  const myPlayerKey = Object.keys(players).find(pid => players[pid].color === currentPlayer);
+  const currentPlayerName = myPlayerKey ? players[myPlayerKey].name : "—";
+
+  // Get colors that have players (for turn rotation)
+  const activeColors = useMemo(() => {
+    const colorsInRoom = new Set(Object.values(players).map(p => p.color));
+    return PLAYER_ORDER.filter(c => colorsInRoom.has(c));
+  }, [players]);
+
+  const getPlayerByColor = (color) => Object.values(players).find(p => p.color === color);
+
+  // Helpers
+  const hasCoinOnBoard = (color) =>
+    Object.values(coins).some((c) => c.color === color && c.pathIndex >= 0 && !c.finished);
 
   const yardCoins = (color) =>
     Object.entries(coins).filter(([_, c]) => c.color === color && c.pathIndex === -1 && !c.finished);
-
-  const boardCoins = (color) =>
-    Object.entries(coins).filter(([_, c]) => c.color === color && c.pathIndex >= 0 && !c.finished);
 
   const finishedCount = (color) =>
     Object.values(coins).filter((c) => c.color === color && c.finished).length;
 
   const getMovableCoins = useMemo(() => {
-    if (!hasRolled || pendingValues.length === 0) return {};
+    if (!hasRolled || pendingValues.length === 0 || !isMyTurn) return {};
     const movable = {};
     const onBoardFlag = hasCoinOnBoard(currentPlayer);
     Object.entries(coins).forEach(([id, coin]) => {
@@ -517,40 +996,58 @@ function ThaayamGame() {
       }
     });
     return movable;
-  }, [coins, currentPlayer, pendingValues, hasRolled]);
+  }, [coins, currentPlayer, pendingValues, hasRolled, isMyTurn]);
 
-  const rollDice = () => {
-    if (rolling || winner || autoMoving || animating) return;
+  // Sync state to firebase (only the current player can modify game state)
+  const updateGS = (updates) => db.ref(`rooms/${roomCode}/gameState`).update(updates);
+
+  // Roll dice — only current player
+  const rollDice = async () => {
+    if (rolling || winner || autoMoving || animating || !isMyTurn || hasRolled) return;
     setRolling(true);
     let n = 0;
-    const interval = setInterval(() => {
-      setDice([Math.floor(Math.random() * 4), Math.floor(Math.random() * 4)]);
+    const interval = setInterval(async () => {
+      const d1 = Math.floor(Math.random() * 4);
+      const d2 = Math.floor(Math.random() * 4);
+      setLocalDice([d1, d2]);
       n++;
       if (n > 8) {
         clearInterval(interval);
         const f1 = Math.floor(Math.random() * 4);
         const f2 = Math.floor(Math.random() * 4);
-        setDice([f1, f2]);
         let value = f1 + f2;
         if (value === 0) value = 12;
-        setDiceValue(value);
+        setLocalDice([f1, f2]);
         setRolling(false);
-        setHasRolled(true);
-        setPendingValues((prev) => [...prev, value]);
+        // Push to server
+        await updateGS({
+          dice: [f1, f2],
+          diceValue: value,
+          hasRolled: true,
+          pendingValues: [...(gs.pendingValues || []), value],
+          lastMoveBy: playerId,
+          moveCounter: (gs.moveCounter || 0) + 1,
+        });
       }
     }, 80);
   };
 
+  // Sync local dice with server
   useEffect(() => {
-    if (!hasRolled || rolling || animating || autoMoving || winner) return;
-    if (pendingValues.length === 0) return;
+    if (!rolling) setLocalDice(dice);
+  }, [dice, rolling]);
+
+  // Re-evaluate roll on server-state change (only by current player)
+  useEffect(() => {
+    if (!isMyTurn || rolling || animating || autoMoving || winner) return;
+    if (!hasRolled || pendingValues.length === 0) return;
     const value = pendingValues[pendingValues.length - 1];
     evaluateRoll(value, pendingValues);
-  }, [hasRolled, pendingValues, coins, currentPlayer]);
+  }, [hasRolled, JSON.stringify(pendingValues), JSON.stringify(coins), currentPlayer, isMyTurn]);
 
-  const evaluateRoll = (value, allValues) => {
-    const board = boardCoins(currentPlayer);
-    const onBoardFlag = board.length > 0;
+  const evaluateRoll = async (value, allValues) => {
+    if (!isMyTurn) return;
+    const onBoardFlag = hasCoinOnBoard(currentPlayer);
 
     const movableForThisValue = {};
     Object.entries(coins).forEach(([id, coin]) => {
@@ -584,11 +1081,15 @@ function ThaayamGame() {
 
     if (movableIdsAny.length === 0) {
       if (isBonus) {
-        setMessage(`${COLORS[currentPlayer].label} rolled ${value} (bonus). No moves possible — roll again!`);
-        setHasRolled(false);
-        setDiceValue(null);
+        await updateGS({
+          message: `${currentPlayerName} rolled ${value} (bonus). No moves — roll again!`,
+          hasRolled: false,
+          diceValue: null,
+        });
       } else {
-        setMessage(`${COLORS[currentPlayer].label} rolled ${value} — no moves possible. Turn passes.`);
+        await updateGS({
+          message: `${currentPlayerName} rolled ${value} — no moves. Turn passes.`,
+        });
         setTimeout(() => endTurn(), 700);
       }
       return;
@@ -601,14 +1102,11 @@ function ThaayamGame() {
     if (shouldAutoMove) {
       const coinId = movableIdsForValue.length === 1 ? movableIdsForValue[0] : movableIdsAny[0];
       const stepsToMove = movableForThisValue[coinId] || movableAny[coinId];
-
-      let autoMsg = `${COLORS[currentPlayer].label} rolled ${value}. `;
-      if (movableIdsAny.length === 1) {
-        autoMsg += `Only one coin can move — auto-moving ${stepsToMove} step${stepsToMove > 1 ? "s" : ""}...`;
-      } else {
-        autoMsg += `Auto-moving ${stepsToMove} step${stepsToMove > 1 ? "s" : ""}...`;
-      }
-      setMessage(autoMsg);
+      let autoMsg = `${currentPlayerName} rolled ${value}. `;
+      autoMsg += movableIdsAny.length === 1
+        ? `Only one coin can move — auto-moving ${stepsToMove} step${stepsToMove > 1 ? "s" : ""}...`
+        : `Auto-moving ${stepsToMove} step${stepsToMove > 1 ? "s" : ""}...`;
+      await updateGS({ message: autoMsg });
       setAutoMoving(true);
       setTimeout(async () => {
         await executeMove(coinId);
@@ -617,18 +1115,19 @@ function ThaayamGame() {
       return;
     }
 
-    let msg = `${COLORS[currentPlayer].label} rolled ${value}.`;
+    let msg = `${currentPlayerName} rolled ${value}.`;
     if (isBonus) msg += " 🎲 Bonus turn!";
     if (allValues.length > 1) msg += ` Pending: [${allValues.join(", ")}].`;
     if (movableIdsForValue.length === 0) {
-      msg += ` Cannot use ${value} now. Click a glowing coin to use another pending value.`;
+      msg += ` Cannot use ${value} now. ${currentPlayerName} pick another coin.`;
     } else {
-      msg += ` ${movableIdsForValue.length} coins can move with ${value} — click a glowing coin.`;
+      msg += ` ${currentPlayerName}, click a glowing coin.`;
     }
-    setMessage(msg);
+    await updateGS({ message: msg });
   };
 
   const executeMove = async (coinId) => {
+    if (!isMyTurn) return;
     const coin = coins[coinId];
     if (!coin || coin.color !== currentPlayer || coin.finished) return;
 
@@ -643,111 +1142,131 @@ function ThaayamGame() {
         if (newIdx < PATHS[currentPlayer].length) { usedValue = v; break; }
       }
     }
-    if (usedValue === null) {
-      setMessage("This coin can't move with current dice. Try a glowing one.");
-      return;
-    }
+    if (usedValue === null) return;
 
     setAnimating(true);
     let startIdx = coin.pathIndex;
     let endIdx = coin.pathIndex === -1 ? 0 : coin.pathIndex + usedValue;
 
+    // Step animation (sync each step to firebase)
     if (coin.pathIndex === -1) {
-      await new Promise((resolve) => {
-        setCoins((prev) => ({ ...prev, [coinId]: { ...prev[coinId], pathIndex: 0 } }));
-        setMessage(`${COLORS[currentPlayer].label} entered the board!`);
-        setTimeout(resolve, 350);
-      });
+      const newCoins = { ...coins, [coinId]: { ...coin, pathIndex: 0 } };
+      await updateGS({ coins: newCoins, message: `${currentPlayerName} entered the board!` });
+      await new Promise((r) => setTimeout(r, 350));
       startIdx = 0;
     }
 
-    const stepDelay = 280;
     for (let step = startIdx + 1; step <= endIdx; step++) {
-      await new Promise((resolve) => {
-        setCoins((prev) => ({ ...prev, [coinId]: { ...prev[coinId], pathIndex: step } }));
-        const stepsLeft = endIdx - step;
-        setMessage(stepsLeft > 0 ? `Moving... ${stepsLeft} step${stepsLeft > 1 ? "s" : ""} to go` : `Moved ${usedValue} steps.`);
-        setTimeout(resolve, stepDelay);
+      const snap = await db.ref(`rooms/${roomCode}/gameState/coins`).once("value");
+      const cur = snap.val() || coins;
+      const newCoins = { ...cur, [coinId]: { ...cur[coinId], pathIndex: step } };
+      const stepsLeft = endIdx - step;
+      await updateGS({
+        coins: newCoins,
+        message: stepsLeft > 0
+          ? `Moving... ${stepsLeft} step${stepsLeft > 1 ? "s" : ""} to go`
+          : `Moved ${usedValue} steps.`
       });
+      await new Promise((r) => setTimeout(r, 280));
     }
 
+    // Final landing — capture check
     const finalSquare = PATHS[currentPlayer][endIdx];
     const finished = endIdx === PATHS[currentPlayer].length - 1;
 
+    const snap = await db.ref(`rooms/${roomCode}/gameState/coins`).once("value");
+    const newCoins = { ...snap.val() };
+    newCoins[coinId] = { ...newCoins[coinId], finished };
     let captured = false;
     let capturedNames = [];
-    setCoins((prev) => {
-      const newCoins = { ...prev };
-      newCoins[coinId] = { ...newCoins[coinId], finished };
-      if (!SAFE_SQUARES.has(finalSquare) && !finished) {
-        Object.entries(newCoins).forEach(([id, c]) => {
-          if (c.color !== currentPlayer && !c.finished && c.pathIndex >= 0 && PATHS[c.color][c.pathIndex] === finalSquare) {
-            newCoins[id] = { ...c, pathIndex: -1 };
-            captured = true;
-            capturedNames.push(COLORS[c.color].label);
-          }
-        });
-      }
-      const finishedNow = Object.values(newCoins).filter((c) => c.color === currentPlayer && c.finished).length;
-      if (finishedNow === 6) {
-        setWinner(currentPlayer);
-        setMessage(`🎉 ${COLORS[currentPlayer].label} wins! All 6 coins reached the center!`);
-      }
-      return newCoins;
-    });
 
-    setAnimating(false);
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    if (winner) return;
+    if (!SAFE_SQUARES.has(finalSquare) && !finished) {
+      Object.entries(newCoins).forEach(([id, c]) => {
+        if (c.color !== currentPlayer && !c.finished && c.pathIndex >= 0 && PATHS[c.color][c.pathIndex] === finalSquare) {
+          newCoins[id] = { ...c, pathIndex: -1 };
+          captured = true;
+          const owner = getPlayerByColor(c.color);
+          capturedNames.push(owner ? owner.name : COLORS[c.color].label);
+        }
+      });
+    }
+
+    const finishedNow = Object.values(newCoins).filter((c) => c.color === currentPlayer && c.finished).length;
+    const isWinner = finishedNow === 6;
 
     const remaining = [...pendingValues];
     remaining.splice(remaining.indexOf(usedValue), 1);
-    setPendingValues(remaining);
 
-    let msg = `Moved ${usedValue} step${usedValue > 1 ? "s" : ""}.`;
+    let msg = `${currentPlayerName} moved ${usedValue} step${usedValue > 1 ? "s" : ""}.`;
     if (captured) msg += ` 💥 Captured ${capturedNames.join(", ")}!`;
     if (finished) msg += " ⭐ Reached center!";
-    if (SAFE_SQUARES.has(finalSquare) && !finished && coin.pathIndex !== -1) {
-      msg += " 🛡️ Safe on X.";
+    if (SAFE_SQUARES.has(finalSquare) && !finished && coin.pathIndex !== -1) msg += " 🛡️ Safe on X.";
+
+    if (isWinner) {
+      await updateGS({
+        coins: newCoins,
+        winner: currentPlayer,
+        message: `🎉 ${currentPlayerName} wins! All 6 coins reached the center!`,
+      });
+      await db.ref(`rooms/${roomCode}/status`).set("finished");
+      setAnimating(false);
+      return;
     }
 
     if (remaining.length > 0) {
       msg += ` Remaining: [${remaining.join(", ")}].`;
-      setMessage(msg);
+      await updateGS({
+        coins: newCoins,
+        pendingValues: remaining,
+        message: msg,
+      });
     } else {
       const lastRoll = diceValue;
       if (BONUS_VALUES.has(lastRoll) || captured || finished) {
         msg += " Roll again!";
-        setMessage(msg);
-        setHasRolled(false);
-        setDiceValue(null);
+        await updateGS({
+          coins: newCoins,
+          pendingValues: [],
+          hasRolled: false,
+          diceValue: null,
+          message: msg,
+        });
       } else {
         msg += " Turn ends.";
-        setMessage(msg);
+        await updateGS({
+          coins: newCoins,
+          pendingValues: [],
+          message: msg,
+        });
         setTimeout(() => endTurn(), 600);
       }
     }
+    setAnimating(false);
+  };
+
+  const endTurn = async () => {
+    const idx = activeColors.indexOf(currentPlayer);
+    const next = activeColors[(idx + 1) % activeColors.length];
+    const nextPlayer = getPlayerByColor(next);
+    await updateGS({
+      currentPlayer: next,
+      diceValue: null,
+      dice: [null, null],
+      hasRolled: false,
+      pendingValues: [],
+      message: `${nextPlayer ? nextPlayer.name : COLORS[next].label}'s turn. Roll the dice.`,
+    });
   };
 
   const handleCoinClick = (coinId) => {
-    if (!hasRolled || rolling || winner || autoMoving || animating) return;
-    if (!(coinId in getMovableCoins)) {
-      setMessage("That coin can't move now. Click a glowing coin.");
-      return;
-    }
+    if (!isMyTurn || !hasRolled || rolling || winner || autoMoving || animating) return;
+    if (!(coinId in getMovableCoins)) return;
     executeMove(coinId);
   };
 
-  const endTurn = () => {
-    const idx = PLAYER_ORDER.indexOf(currentPlayer);
-    const next = PLAYER_ORDER[(idx + 1) % 4];
-    setCurrentPlayer(next);
-    setDiceValue(null);
-    setDice([null, null]);
-    setHasRolled(false);
-    setPendingValues([]);
-    setMessage(`${COLORS[next].label}'s turn. Roll the dice.`);
-  };
+  // ============================================================
+  // RENDER
+  // ============================================================
 
   const renderCell = (r, c) => {
     const key = `${r},${c}`;
@@ -769,7 +1288,6 @@ function ThaayamGame() {
     else if (isSafe || isCornerSafe) bg = "#E8F5E9";
 
     const hasAnimatingCoin = animating && coinsHere.some(([_, c]) => c.color === currentPlayer);
-
     const cellStyle = {
       background: bg,
       boxShadow: hasAnimatingCoin
@@ -786,7 +1304,6 @@ function ThaayamGame() {
             textShadow: isEntry || isCenter ? "none" : "0 0 2px rgba(255,255,255,0.5)",
           }}>X</span>
         )}
-
         {coinsHere.length > 0 && (
           <div className="coin-stack">
             {coinsHere.slice(0, 4).map(([id, coin]) => {
@@ -798,8 +1315,7 @@ function ThaayamGame() {
                   onClick={() => handleCoinClick(id)}
                   className={`coin ${isMovable ? "pulse" : ""}`}
                   style={{
-                    width: sz,
-                    height: sz,
+                    width: sz, height: sz,
                     background: `radial-gradient(circle at 30% 30%, ${COLORS[coin.color].light}, ${COLORS[coin.color].main} 60%, ${COLORS[coin.color].dark})`,
                     border: `1.5px solid ${COLORS[coin.color].dark}`,
                     boxShadow: isMovable
@@ -811,13 +1327,10 @@ function ThaayamGame() {
               );
             })}
             {coinsHere.length > 4 && (
-              <span style={{position:"absolute", fontSize:"8px", fontWeight:700, color:"white"}}>
-                +{coinsHere.length - 4}
-              </span>
+              <span style={{position:"absolute", fontSize:"8px", fontWeight:700, color:"white"}}>+{coinsHere.length - 4}</span>
             )}
           </div>
         )}
-
         {isCenter && finishedHere.length > 0 && coinsHere.length === 0 && (
           <div style={{position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center"}}>
             <span style={{color:"white", fontSize:"12px", fontWeight:700}}>⭐{finishedHere.length}</span>
@@ -834,9 +1347,7 @@ function ThaayamGame() {
         onClick={() => id && handleCoinClick(id)}
         className={isMovable ? "pawn-pulse" : ""}
         style={{
-          position: "relative",
-          width: `${size}px`,
-          height: `${size * 1.4}px`,
+          position: "relative", width: `${size}px`, height: `${size * 1.4}px`,
           transition: "all 0.2s",
           transform: isMovable ? "scale(1.15)" : "scale(1)",
           filter: isMovable
@@ -860,8 +1371,11 @@ function ThaayamGame() {
     const yc = yardCoins(color);
     const finished = finishedCount(color);
     const isCurrent = color === currentPlayer;
+    const player = getPlayerByColor(color);
+    const isMine = color === myColor;
+
     return (
-      <div className={`yard ${isCurrent ? "current" : ""}`} style={{
+      <div className={`yard ${isCurrent ? "current" : ""} ${isMine ? "assigned" : ""}`} style={{
         background: isCurrent ? COLORS[color].light : "transparent",
       }}>
         <div className="yard-label" style={{ color: COLORS[color].dark }}>
@@ -881,18 +1395,19 @@ function ThaayamGame() {
         <div className="yard-finished" style={{ color: COLORS[color].dark }}>
           ⭐ {finished}/6
         </div>
+        {player && (
+          <div className="yard-name-tag" title={player.name}>
+            {player.name}{isMine ? " (You)" : ""}
+          </div>
+        )}
       </div>
     );
   };
 
   const StickDie = ({ value }) => {
-    if (value === null) {
-      return <div className="stick-die stick-die-empty"></div>;
-    }
+    if (value === null) return <div className="stick-die stick-die-empty"></div>;
     const dots = [];
-    for (let i = 0; i < value; i++) {
-      dots.push(<div key={i} className="stick-dot"></div>);
-    }
+    for (let i = 0; i < value; i++) dots.push(<div key={i} className="stick-dot"></div>);
     return (
       <div className="stick-die stick-die-rolled">
         {value === 0 ? <span style={{fontSize:"8px", color:"#44403C", fontWeight:700}}>FLAT</span> : dots}
@@ -900,20 +1415,23 @@ function ThaayamGame() {
     );
   };
 
+  const displayDice = rolling ? localDice : dice;
+
   return (
     <div className="app-root">
       <div className="title">
         <h1>தாயம் · Thaayam</h1>
-        <p>Traditional Tamil Board Game</p>
+        <p>Online · Room {roomCode}</p>
+      </div>
+
+      <div className="room-info-bar">
+        Room: <strong>{roomCode}</strong> · You: <strong style={{color: COLORS[myColor]?.dark}}>{me?.name}</strong>
       </div>
 
       <div className="board-area">
         {renderYard("green")}
-
         <div className="middle-row">
-          <div className="left-yard-slot">
-            {renderYard("red")}
-          </div>
+          <div className="left-yard-slot">{renderYard("red")}</div>
           <div className="board">
             <div className="board-grid">
               {Array.from({ length: 7 }, (_, r) =>
@@ -921,47 +1439,46 @@ function ThaayamGame() {
               )}
             </div>
           </div>
-          <div className="right-yard-slot">
-            {renderYard("yellow")}
-          </div>
+          <div className="right-yard-slot">{renderYard("yellow")}</div>
         </div>
-
         {renderYard("blue")}
       </div>
 
       <div className="controls">
-        <div className="turn-pill" style={{ background: COLORS[currentPlayer].main }}>
-          {COLORS[currentPlayer].name} · {COLORS[currentPlayer].label}'s Turn
-        </div>
+        {isMyTurn ? (
+          <div className="your-turn-banner">⭐ YOUR TURN ⭐</div>
+        ) : (
+          <div className="turn-pill" style={{ background: COLORS[currentPlayer].main }}>
+            {currentPlayerName}'s Turn ({COLORS[currentPlayer].label})
+          </div>
+        )}
 
         <div className="dice-row">
           <div style={{display:"flex", flexDirection:"column", gap:"6px"}}>
-            <StickDie value={dice[0]} />
-            <StickDie value={dice[1]} />
+            <StickDie value={displayDice[0]} />
+            <StickDie value={displayDice[1]} />
           </div>
-
           <div className="total-box">
             <div className="total-label">Total</div>
-            <div className="total-value" style={{
-              border: `3px solid ${COLORS[currentPlayer].main}`,
-            }}>
+            <div className="total-value" style={{ border: `3px solid ${COLORS[currentPlayer].main}` }}>
               {diceValue ?? "—"}
             </div>
           </div>
-
           <button
             onClick={rollDice}
-            disabled={rolling || hasRolled || winner || autoMoving || animating}
+            disabled={!isMyTurn || rolling || hasRolled || winner || autoMoving || animating}
             className="roll-button"
             style={{
-              background: `linear-gradient(135deg, ${COLORS[currentPlayer].main}, ${COLORS[currentPlayer].dark})`,
+              background: isMyTurn
+                ? `linear-gradient(135deg, ${COLORS[currentPlayer].main}, ${COLORS[currentPlayer].dark})`
+                : "linear-gradient(135deg, #9E9E9E, #616161)",
             }}
           >
             {rolling ? "..." : animating ? "Moving" : autoMoving ? "Auto" : "Roll"}
           </button>
         </div>
 
-        <div className="message-box">{message}</div>
+        <div className="message-box">{message || "—"}</div>
 
         {pendingValues.length > 0 && (
           <div className="pending-box">
@@ -971,34 +1488,133 @@ function ThaayamGame() {
 
         {winner && (
           <button
-            onClick={() => window.location.reload()}
+            onClick={onLeave}
             className="play-again bounce"
             style={{ background: COLORS[winner].main }}
           >
-            🎉 Play Again
+            🏠 Back to Lobby
           </button>
         )}
 
         <div className="legend">
-          🎲 Bonus on 1, 5, 6, 12 · ✨ Glowing coins can move · ⚡ Auto-move when only one option · 🛡️ Coins on <strong>X</strong> squares are SAFE — cannot be captured
+          🎲 Bonus on 1, 5, 6, 12 · ✨ Glowing coins can move · 🛡️ X squares are SAFE
         </div>
+
+        <button className="leave-room-btn" onClick={onLeave}>Leave Room</button>
       </div>
     </div>
   );
 }
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<ThaayamGame />);
+// ============================================================
+// ROOT APP — manages screens
+// ============================================================
 
-requestAnimationFrame(() => {
-  setTimeout(() => {
-    const loader = document.getElementById("loading");
-    if (loader) {
-      loader.classList.add("hide");
-      setTimeout(() => loader.remove(), 500);
+function App() {
+  const [screen, setScreen] = useState("lobby"); // lobby | waiting | game
+  const [roomCode, setRoomCode] = useState(null);
+  const [playerId, setPlayerId] = useState(null);
+  const [myColor, setMyColor] = useState(null);
+  const [room, setRoom] = useState(null);
+  const [connected, setConnected] = useState(true);
+
+  // Subscribe to firebase connection state
+  useEffect(() => {
+    if (!firebaseReady) return;
+    const ref = db.ref(".info/connected");
+    const cb = (snap) => setConnected(snap.val() === true);
+    ref.on("value", cb);
+    return () => ref.off("value", cb);
+  }, []);
+
+  // Subscribe to room
+  useEffect(() => {
+    if (!roomCode || !firebaseReady) return;
+    const ref = db.ref(`rooms/${roomCode}`);
+    const cb = (snap) => {
+      const data = snap.val();
+      if (!data) {
+        // Room deleted
+        handleLeave();
+        return;
+      }
+      setRoom(data);
+      if (data.status === "playing" && screen !== "game") {
+        setScreen("game");
+      } else if (data.status === "waiting" && screen !== "waiting") {
+        setScreen("waiting");
+      }
+    };
+    ref.on("value", cb);
+    return () => ref.off("value", cb);
+  }, [roomCode]);
+
+  const handleJoinRoom = (code, pid, color) => {
+    setRoomCode(code);
+    setPlayerId(pid);
+    setMyColor(color);
+    setScreen("waiting");
+  };
+
+  const handleLeave = async () => {
+    if (roomCode && playerId && firebaseReady) {
+      try {
+        const snap = await db.ref(`rooms/${roomCode}/players/${playerId}`).once("value");
+        if (snap.exists()) {
+          await db.ref(`rooms/${roomCode}/players/${playerId}`).remove();
+        }
+        // If room is empty or host left during waiting, delete it
+        const roomSnap = await db.ref(`rooms/${roomCode}`).once("value");
+        const roomData = roomSnap.val();
+        if (!roomData?.players || Object.keys(roomData.players).length === 0) {
+          await db.ref(`rooms/${roomCode}`).remove();
+        } else if (roomData.host === playerId && roomData.status === "waiting") {
+          // Host left during waiting -> delete room
+          await db.ref(`rooms/${roomCode}`).remove();
+        }
+      } catch (e) {
+        console.error("Leave error:", e);
+      }
     }
-  }, 100);
-});
+    setRoomCode(null);
+    setPlayerId(null);
+    setMyColor(null);
+    setRoom(null);
+    setScreen("lobby");
+  };
+
+  return (
+    <>
+      {firebaseReady && (
+        <div className={`conn-status ${connected ? "online" : "offline"}`}>
+          <span className="conn-dot" />
+          {connected ? "ONLINE" : "OFFLINE"}
+        </div>
+      )}
+
+      {screen === "lobby" && <Lobby onJoinRoom={handleJoinRoom} />}
+      {screen === "waiting" && room && (
+        <WaitingRoom
+          roomCode={roomCode}
+          playerId={playerId}
+          room={room}
+          onLeave={handleLeave}
+        />
+      )}
+      {screen === "game" && room && (
+        <MultiplayerGame
+          roomCode={roomCode}
+          playerId={playerId}
+          room={room}
+          onLeave={handleLeave}
+        />
+      )}
+    </>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
 </script>
 </body>
 </html>
