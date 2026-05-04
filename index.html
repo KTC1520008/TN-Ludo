@@ -1209,12 +1209,26 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
           message: `${currentPlayerName} rolled ${value} (bonus). No moves — roll again!`,
           hasRolled: false,
           diceValue: null,
+          pendingValues: [],
+          dice: [null, null],
         });
       } else {
+        // ---- No moves AND no bonus → turn passes (atomic) ----
         await updateGS({
           message: `${currentPlayerName} rolled ${value} — no moves. Turn passes.`,
+          pendingValues: [],
+          hasRolled: false,
         });
-        setTimeout(() => endTurn(), 400);
+        await new Promise((r) => setTimeout(r, 400));
+        const idx = activeColors.indexOf(currentPlayer);
+        const next = activeColors[(idx + 1) % activeColors.length];
+        const nextPlayer = getPlayerByColor(next);
+        await updateGS({
+          currentPlayer: next,
+          diceValue: null,
+          dice: [null, null],
+          message: `${nextPlayer ? nextPlayer.name : COLORS[next].label}'s turn. Roll the dice.`,
+        });
       }
       return;
     }
@@ -1356,13 +1370,26 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
           message: msg,
         });
       } else {
+        // ---- TURN ENDS — do everything in ONE atomic update ----
         msg += " Turn ends.";
+        const idx = activeColors.indexOf(currentPlayer);
+        const next = activeColors[(idx + 1) % activeColors.length];
+        const nextPlayer = getPlayerByColor(next);
+        // Brief pause so player sees the "Turn ends" message, then update
         await updateGS({
           coins: newCoins,
           pendingValues: [],
+          hasRolled: false,
+          diceValue: null,
+          dice: [null, null],
           message: msg,
         });
-        setTimeout(() => endTurn(), 350);
+        // Pause briefly, then advance the turn
+        await new Promise((r) => setTimeout(r, 350));
+        await updateGS({
+          currentPlayer: next,
+          message: `${nextPlayer ? nextPlayer.name : COLORS[next].label}'s turn. Roll the dice.`,
+        });
       }
     }
     setAnimating(false);
