@@ -513,6 +513,14 @@
     padding: 14px 20px;
     border-radius: 10px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: opacity 0.3s, filter 0.3s;
+  }
+  .dice-row.disabled {
+    opacity: 0.45;
+    filter: grayscale(0.6);
+    pointer-events: none;
+    background: rgba(220,220,220,0.5);
+    box-shadow: none;
   }
   .stick-die {
     width: 100px;
@@ -1590,7 +1598,7 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
           </div>
         )}
 
-        <div className="dice-row">
+        <div className={`dice-row ${!isMyTurn ? "disabled" : ""}`}>
           <div style={{display:"flex", flexDirection:"column", gap:"6px"}}>
             <StickDie value={displayDice[0]} />
             <StickDie value={displayDice[1]} />
