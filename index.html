@@ -857,6 +857,65 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
+
+  /* Winner / Draw banner */
+  .winner-banner {
+    margin-top: 8px;
+    padding: 24px 20px;
+    border-radius: var(--radius);
+    width: 100%;
+    text-align: center;
+    color: white;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    border: 2px solid rgba(255,255,255,0.2);
+    animation: fadeIn 0.5s ease;
+  }
+  .winner-emoji {
+    font-size: 48px;
+    line-height: 1;
+    margin-bottom: 8px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  }
+  .winner-text {
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+  .winner-subtext {
+    font-size: 12px;
+    color: rgba(255,255,255,0.85);
+    margin-top: 6px;
+    letter-spacing: 0.05em;
+  }
+  .draw-banner {
+    background: linear-gradient(135deg, #6B7DD8 0%, #4A5BBE 100%);
+  }
+  .draw-players {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .draw-player-chip {
+    background: rgba(255,255,255,0.18);
+    backdrop-filter: blur(4px);
+    padding: 6px 12px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1.5px solid var(--chip-color);
+  }
+  .draw-player-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1.5px solid white;
+  }
   .leave-room-btn {
     margin-top: 4px;
     padding: 6px 14px;
@@ -1287,7 +1346,8 @@ function WaitingRoom({ roomCode, playerId, room, onStart, onLeave }) {
       diceValue: null,
       hasRolled: false,
       pendingValues: [],
-      killers: {}, // colors that have made at least one capture (unlocks middle ring)
+      killers: {},
+      noMoveStreak: 0, // counts consecutive turns without any move (for stalemate detection)
       message: "Game started! First coin needs a 1 to enter.",
       winner: null,
       lastMoveBy: null,
@@ -1383,7 +1443,8 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
   const pendingValues = gs.pendingValues || [];
   const message = gs.message || "";
   const winner = gs.winner;
-  const killers = gs.killers || {}; // { red: true, green: true } — colors that have made a kill
+  const killers = gs.killers || {};
+  const noMoveStreak = gs.noMoveStreak || 0;
 
   const isMyTurn = myColor === currentPlayer;
   const myPlayerKey = Object.keys(players).find(pid => players[pid].color === currentPlayer);
@@ -1553,10 +1614,29 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
         });
       } else {
         // ---- No moves AND no bonus → turn passes (atomic) ----
+        const newStreak = noMoveStreak + 1;
+        const STALEMATE_THRESHOLD = 8;
+
+        if (newStreak >= STALEMATE_THRESHOLD) {
+          // 🤝 STALEMATE — declare draw
+          await updateGS({
+            message: `🤝 Stalemate! ${STALEMATE_THRESHOLD} turns with no moves. Game is a draw.`,
+            pendingValues: [],
+            hasRolled: false,
+            diceValue: null,
+            dice: [null, null],
+            winner: "draw",
+            noMoveStreak: newStreak,
+          });
+          await db.ref(`rooms/${roomCode}/status`).set("finished");
+          return;
+        }
+
         await updateGS({
-          message: `${currentPlayerName} rolled ${value} — no moves. Turn passes.`,
+          message: `${currentPlayerName} rolled ${value} — no moves. Turn passes. (${newStreak}/${STALEMATE_THRESHOLD} stalemate)`,
           pendingValues: [],
           hasRolled: false,
+          noMoveStreak: newStreak,
         });
         await new Promise((r) => setTimeout(r, 400));
         const idx = activeColors.indexOf(currentPlayer);
@@ -1686,6 +1766,7 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
       await updateGS({
         coins: newCoins,
         killers: newKillers,
+        noMoveStreak: 0,
         winner: currentPlayer,
         message: `🎉 ${currentPlayerName} wins! All 6 coins reached the center!`,
       });
@@ -1699,6 +1780,7 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
       await updateGS({
         coins: newCoins,
         killers: newKillers,
+        noMoveStreak: 0,
         pendingValues: remaining,
         message: msg,
       });
@@ -1709,6 +1791,7 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
         await updateGS({
           coins: newCoins,
           killers: newKillers,
+          noMoveStreak: 0,
           pendingValues: [],
           hasRolled: false,
           diceValue: null,
@@ -1723,6 +1806,7 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
         await updateGS({
           coins: newCoins,
           killers: newKillers,
+          noMoveStreak: 0,
           pendingValues: [],
           hasRolled: false,
           diceValue: null,
@@ -2064,11 +2148,42 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
           </div>
         )}
 
+        {winner && winner !== "draw" && (
+          <div className="winner-banner" style={{
+            background: `linear-gradient(135deg, ${COLORS[winner].main}, ${COLORS[winner].dark})`,
+          }}>
+            <div className="winner-emoji">🏆</div>
+            <div className="winner-text">
+              {getPlayerByColor(winner)?.name || COLORS[winner].label} Wins!
+            </div>
+            <div className="winner-subtext">All 6 coins reached the center</div>
+          </div>
+        )}
+
+        {winner === "draw" && (
+          <div className="winner-banner draw-banner">
+            <div className="winner-emoji">🤝</div>
+            <div className="winner-text">It's a Draw!</div>
+            <div className="winner-subtext">Neither player could break the deadlock</div>
+            <div className="draw-players">
+              {activeColors.map(c => {
+                const p = getPlayerByColor(c);
+                return (
+                  <div key={c} className="draw-player-chip" style={{ '--chip-color': COLORS[c].main }}>
+                    <div className="draw-player-dot" style={{ background: COLORS[c].main }} />
+                    <span>{p?.name || COLORS[c].label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {winner && (
           <button
             onClick={onLeave}
             className="play-again bounce"
-            style={{ '--player-color': COLORS[winner].main, background: COLORS[winner].main }}
+            style={winner !== "draw" ? { '--player-color': COLORS[winner].main, background: COLORS[winner].main } : undefined}
           >
             🏠 Back to Lobby
           </button>
@@ -2135,8 +2250,9 @@ function SoloGame({ playerName, aiCount, onLeave }) {
   const [localDice, setLocalDice] = useState([null, null]);
 
   // 🎯 KILLER RULE: Track which colors have made at least one capture.
-  // A coin cannot advance into the middle ring (path index >= 24) until its player has captured someone.
-  const [killers, setKillers] = useState(new Set()); // colors that have killed at least once
+  const [killers, setKillers] = useState(new Set());
+  // 🤝 STALEMATE: Track consecutive turns with no moves
+  const [noMoveStreak, setNoMoveStreak] = useState(0);
 
   const isMyTurn = currentPlayer === myColor;
   const isAITurn = !isMyTurn;
@@ -2288,7 +2404,20 @@ function SoloGame({ playerName, aiCount, onLeave }) {
         setPendingValues([]);
         setDice([null, null]);
       } else {
-        setMessage(`${currentPlayerName} rolled ${value} — no moves. Turn passes.`);
+        const STALEMATE_THRESHOLD = 8;
+        const newStreak = noMoveStreak + 1;
+        if (newStreak >= STALEMATE_THRESHOLD) {
+          // 🤝 STALEMATE — declare draw
+          setWinner("draw");
+          setMessage(`🤝 Stalemate! ${STALEMATE_THRESHOLD} turns with no moves. Game is a draw.`);
+          setPendingValues([]);
+          setHasRolled(false);
+          setDiceValue(null);
+          setDice([null, null]);
+          return;
+        }
+        setNoMoveStreak(newStreak);
+        setMessage(`${currentPlayerName} rolled ${value} — no moves. Turn passes. (${newStreak}/${STALEMATE_THRESHOLD})`);
         setPendingValues([]);
         setHasRolled(false);
         setTimeout(() => endTurn(), 500);
@@ -2408,6 +2537,9 @@ function SoloGame({ playerName, aiCount, onLeave }) {
         return next;
       });
     }
+
+    // 🤝 Reset stalemate counter — a move was successfully made
+    setNoMoveStreak(0);
 
     const remaining = [...pendingValues];
     remaining.splice(remaining.indexOf(usedValue), 1);
@@ -2725,8 +2857,43 @@ function SoloGame({ playerName, aiCount, onLeave }) {
           </div>
         )}
 
+        {winner && winner !== "draw" && (
+          <div className="winner-banner" style={{
+            background: `linear-gradient(135deg, ${COLORS[winner].main}, ${COLORS[winner].dark})`,
+          }}>
+            <div className="winner-emoji">🏆</div>
+            <div className="winner-text">
+              {Object.values(players).find(p => p.color === winner)?.name || COLORS[winner].label} Wins!
+            </div>
+            <div className="winner-subtext">All 6 coins reached the center</div>
+          </div>
+        )}
+
+        {winner === "draw" && (
+          <div className="winner-banner draw-banner">
+            <div className="winner-emoji">🤝</div>
+            <div className="winner-text">It's a Draw!</div>
+            <div className="winner-subtext">No one could break the deadlock</div>
+            <div className="draw-players">
+              {usedColors.map(c => {
+                const p = Object.values(players).find(pl => pl.color === c);
+                return (
+                  <div key={c} className="draw-player-chip" style={{ '--chip-color': COLORS[c].main }}>
+                    <div className="draw-player-dot" style={{ background: COLORS[c].main }} />
+                    <span>{p?.name || COLORS[c].label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {winner && (
-          <button onClick={onLeave} className="play-again bounce" style={{ background: COLORS[winner].main }}>
+          <button
+            onClick={onLeave}
+            className="play-again bounce"
+            style={winner !== "draw" ? { background: COLORS[winner].main } : undefined}
+          >
             🏠 Back to Lobby
           </button>
         )}
