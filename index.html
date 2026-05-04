@@ -421,7 +421,26 @@
     border-radius: 4px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     flex-shrink: 0;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
+  .board.rot-0    { transform: rotate(0deg); }
+  .board.rot-90   { transform: rotate(90deg); }
+  .board.rot-180  { transform: rotate(180deg); }
+  .board.rot-270  { transform: rotate(270deg); }
+
+  /* Counter-rotate cell contents so coins/X stay upright */
+  .cell-content-wrap {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .board.rot-0   .cell-content-wrap { transform: rotate(0deg); }
+  .board.rot-90  .cell-content-wrap { transform: rotate(-90deg); }
+  .board.rot-180 .cell-content-wrap { transform: rotate(-180deg); }
+  .board.rot-270 .cell-content-wrap { transform: rotate(-270deg); }
   .board-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -1035,6 +1054,36 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
   const myPlayerKey = Object.keys(players).find(pid => players[pid].color === currentPlayer);
   const currentPlayerName = myPlayerKey ? players[myPlayerKey].name : "—";
 
+  // ----- BOARD ROTATION based on player's color -----
+  // We rotate the board so the player's yard sits at the BOTTOM.
+  // Original layout: green=top, red=left, yellow=right, blue=bottom.
+  // Rotating CW by N degrees moves content like: top→right, right→bottom, bottom→left, left→top.
+  // To place each player's yard at BOTTOM:
+  //   blue  (already bottom) → 0°
+  //   yellow (right → bottom) → 90° CW
+  //   green (top → bottom)    → 180°
+  //   red   (left → bottom)   → 270° CW (= 90° CCW)
+  const ROTATION_DEG = { blue: 0, yellow: 90, green: 180, red: 270 };
+  const myRotation = ROTATION_DEG[myColor] ?? 0;
+
+  // After rotating the board CW by myRotation, what color appears in each visual slot?
+  // CW rotation moves content forward in the [top, right, bottom, left] cycle.
+  // If original positions are top=green, right=yellow, bottom=blue, left=red,
+  // and we rotate CW by k*90°, each piece of content moves k slots forward in the cycle.
+  // So the slot that NOW shows position p was originally at (p - k) mod 4.
+  function getYardSlots(rotation) {
+    const cwOrder = ["green", "yellow", "blue", "red"]; // top, right, bottom, left (originals)
+    const shift = rotation / 90; // 0,1,2,3
+    // slot index 0 (top) now shows what was originally at index (0 - shift + 4) % 4
+    return {
+      top:    cwOrder[(0 - shift + 4) % 4],
+      right:  cwOrder[(1 - shift + 4) % 4],
+      bottom: cwOrder[(2 - shift + 4) % 4],
+      left:   cwOrder[(3 - shift + 4) % 4],
+    };
+  }
+  const yardSlots = getYardSlots(myRotation);
+
   // Get colors that have players (for turn rotation)
   const activeColors = useMemo(() => {
     const colorsInRoom = new Set(Object.values(players).map(p => p.color));
@@ -1164,7 +1213,7 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
         await updateGS({
           message: `${currentPlayerName} rolled ${value} — no moves. Turn passes.`,
         });
-        setTimeout(() => endTurn(), 700);
+        setTimeout(() => endTurn(), 400);
       }
       return;
     }
@@ -1185,7 +1234,7 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
       setTimeout(async () => {
         await executeMove(coinId);
         setAutoMoving(false);
-      }, 700);
+      }, 350);
       return;
     }
 
@@ -1226,7 +1275,7 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
     if (coin.pathIndex === -1) {
       const newCoins = { ...coins, [coinId]: { ...coin, pathIndex: 0 } };
       await updateGS({ coins: newCoins, message: `${currentPlayerName} entered the board!` });
-      await new Promise((r) => setTimeout(r, 350));
+      await new Promise((r) => setTimeout(r, 180));
       startIdx = 0;
     }
 
@@ -1241,7 +1290,7 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
           ? `Moving... ${stepsLeft} step${stepsLeft > 1 ? "s" : ""} to go`
           : `Moved ${usedValue} steps.`
       });
-      await new Promise((r) => setTimeout(r, 280));
+      await new Promise((r) => setTimeout(r, 120));
     }
 
     // Final landing — capture check
@@ -1312,7 +1361,7 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
           pendingValues: [],
           message: msg,
         });
-        setTimeout(() => endTurn(), 600);
+        setTimeout(() => endTurn(), 350);
       }
     }
     setAnimating(false);
@@ -1372,44 +1421,46 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
 
     return (
       <div key={key} className="cell" style={cellStyle}>
-        {(isSafe || isCornerSafe) && (
-          <span className="x-mark" style={{
-            color: isEntry || isCenter ? "rgba(0,0,0,0.85)" : "#1B5E20",
-            textShadow: isEntry || isCenter ? "none" : "0 0 2px rgba(255,255,255,0.5)",
-          }}>X</span>
-        )}
-        {coinsHere.length > 0 && (
-          <div className="coin-stack">
-            {coinsHere.slice(0, 4).map(([id, coin]) => {
-              const isMovable = id in getMovableCoins;
-              const sz = coinsHere.length > 1 ? "45%" : "75%";
-              return (
-                <button
-                  key={id}
-                  onClick={() => handleCoinClick(id)}
-                  className={`coin ${isMovable ? "pulse" : ""}`}
-                  style={{
-                    width: sz, height: sz,
-                    background: `radial-gradient(circle at 30% 30%, ${COLORS[coin.color].light}, ${COLORS[coin.color].main} 60%, ${COLORS[coin.color].dark})`,
-                    border: `1.5px solid ${COLORS[coin.color].dark}`,
-                    boxShadow: isMovable
-                      ? `0 0 0 2px white, 0 0 8px 3px ${COLORS[coin.color].main}`
-                      : "0 1px 2px rgba(0,0,0,0.3)",
-                    transform: isMovable ? "scale(1.1)" : "scale(1)",
-                  }}
-                />
-              );
-            })}
-            {coinsHere.length > 4 && (
-              <span style={{position:"absolute", fontSize:"8px", fontWeight:700, color:"white"}}>+{coinsHere.length - 4}</span>
-            )}
-          </div>
-        )}
-        {isCenter && finishedHere.length > 0 && coinsHere.length === 0 && (
-          <div style={{position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center"}}>
-            <span style={{color:"white", fontSize:"12px", fontWeight:700}}>⭐{finishedHere.length}</span>
-          </div>
-        )}
+        <div className="cell-content-wrap">
+          {(isSafe || isCornerSafe) && (
+            <span className="x-mark" style={{
+              color: isEntry || isCenter ? "rgba(0,0,0,0.85)" : "#1B5E20",
+              textShadow: isEntry || isCenter ? "none" : "0 0 2px rgba(255,255,255,0.5)",
+            }}>X</span>
+          )}
+          {coinsHere.length > 0 && (
+            <div className="coin-stack">
+              {coinsHere.slice(0, 4).map(([id, coin]) => {
+                const isMovable = id in getMovableCoins;
+                const sz = coinsHere.length > 1 ? "45%" : "75%";
+                return (
+                  <button
+                    key={id}
+                    onClick={() => handleCoinClick(id)}
+                    className={`coin ${isMovable ? "pulse" : ""}`}
+                    style={{
+                      width: sz, height: sz,
+                      background: `radial-gradient(circle at 30% 30%, ${COLORS[coin.color].light}, ${COLORS[coin.color].main} 60%, ${COLORS[coin.color].dark})`,
+                      border: `1.5px solid ${COLORS[coin.color].dark}`,
+                      boxShadow: isMovable
+                        ? `0 0 0 2px white, 0 0 8px 3px ${COLORS[coin.color].main}`
+                        : "0 1px 2px rgba(0,0,0,0.3)",
+                      transform: isMovable ? "scale(1.1)" : "scale(1)",
+                    }}
+                  />
+                );
+              })}
+              {coinsHere.length > 4 && (
+                <span style={{position:"absolute", fontSize:"8px", fontWeight:700, color:"white"}}>+{coinsHere.length - 4}</span>
+              )}
+            </div>
+          )}
+          {isCenter && finishedHere.length > 0 && coinsHere.length === 0 && (
+            <div style={{position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center"}}>
+              <span style={{color:"white", fontSize:"12px", fontWeight:700}}>⭐{finishedHere.length}</span>
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -1516,19 +1567,19 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
       </div>
 
       <div className="board-area">
-        {renderYard("green")}
+        {renderYard(yardSlots.top)}
         <div className="middle-row">
-          <div className="left-yard-slot">{renderYard("red")}</div>
-          <div className="board">
+          <div className="left-yard-slot">{renderYard(yardSlots.left)}</div>
+          <div className={`board rot-${myRotation}`}>
             <div className="board-grid">
               {Array.from({ length: 7 }, (_, r) =>
                 Array.from({ length: 7 }, (_, c) => renderCell(r, c))
               )}
             </div>
           </div>
-          <div className="right-yard-slot">{renderYard("yellow")}</div>
+          <div className="right-yard-slot">{renderYard(yardSlots.right)}</div>
         </div>
-        {renderYard("blue")}
+        {renderYard(yardSlots.bottom)}
       </div>
 
       <div className="controls">
