@@ -22,31 +22,96 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Noto+Sans+Tamil:wght@400;700&display=swap" rel="stylesheet">
 
 <style>
-  * { box-sizing: border-box; }
+  /* ==========================================
+     RESET & BASE
+     ========================================== */
+  *, *::before, *::after { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0;
     overscroll-behavior: none;
     -webkit-tap-highlight-color: transparent;
-    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+    color: #FFFFFF;
+    -webkit-font-smoothing: antialiased;
+    background: #0F1B3D;
   }
-  button { font-family: inherit; cursor: pointer; border: none; background: none; padding: 0; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; padding: 0; color: inherit; }
   button:disabled { cursor: not-allowed; }
   input { font-family: inherit; }
 
-  @keyframes coinPulse { 0%,100% { opacity:1; } 50% { opacity:0.7; } }
-  .pulse, .pawn-pulse { animation: coinPulse 1s ease-in-out infinite; }
+  :root {
+    --bg-deep: #0A1438;
+    --bg-mid: #14245C;
+    --bg-light: #1E347A;
+    --gold: #FFD54F;
+    --gold-dark: #FFA000;
+    --gold-light: #FFE082;
+    --text-light: #FFFFFF;
+    --text-muted: #B8C5E5;
+    --text-dim: #7388B8;
+    --card-dark: #1A2A5E;
+    --card-darker: #0F1B40;
+    --shadow-glow: 0 0 24px rgba(255, 213, 79, 0.25);
+    --shadow-deep: 0 8px 32px rgba(0,0,0,0.4);
+    --radius: 14px;
+    --radius-sm: 10px;
+    --radius-lg: 22px;
+  }
+
+  /* ==========================================
+     KEYFRAMES
+     ========================================== */
+  @keyframes coinPulse { 0%,100% { opacity:1; } 50% { opacity:0.55; } }
+  .pulse, .pawn-pulse { animation: coinPulse 0.9s ease-in-out infinite; }
   @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
   .bounce { animation: bounce 0.8s ease-in-out infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes goldShine {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 213, 79, 0.6), inset 0 0 12px rgba(255,213,79,0.2); }
+    50% { box-shadow: 0 0 16px 4px rgba(255, 213, 79, 0.4), inset 0 0 16px rgba(255,213,79,0.3); }
+  }
+  @keyframes turnGlow {
+    0%, 100% { box-shadow: 0 0 0 4px var(--player-color, #FFD54F), 0 0 16px 4px var(--player-color, #FFD54F); }
+    50% { box-shadow: 0 0 0 4px var(--player-color, #FFD54F), 0 0 28px 8px var(--player-color, #FFD54F); }
+  }
+  @keyframes dotPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
   .spinner {
-    width: 40px; height: 40px;
-    border: 4px solid #FBC02D;
-    border-top: 4px solid #5D4037;
+    width: 36px; height: 36px;
+    border: 3px solid rgba(255,255,255,0.2);
+    border-top: 3px solid var(--gold);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }
 
-  /* ---- Lobby / Waiting Room screens ---- */
+  /* ==========================================
+     DARK NAVY BACKGROUND with pattern
+     ========================================== */
+  body {
+    background:
+      radial-gradient(ellipse at top, var(--bg-light) 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-mid) 0%, var(--bg-deep) 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    position: relative;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(255,213,79,0.04) 0%, transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(123, 87, 255, 0.04) 0%, transparent 40%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ==========================================
+     LOBBY / WAITING ROOM
+     ========================================== */
   .screen {
     min-height: 100vh;
     width: 100%;
@@ -55,195 +120,226 @@
     align-items: center;
     justify-content: center;
     padding: 20px;
-    background: linear-gradient(180deg, #FFF59D 0%, #FBC02D 100%);
+    position: relative;
+    z-index: 1;
   }
   .lobby-card {
-    background: white;
-    padding: 28px 24px;
-    border-radius: 16px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-    max-width: 380px;
+    background: linear-gradient(180deg, var(--card-dark) 0%, var(--card-darker) 100%);
+    padding: 32px 26px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-deep), inset 0 1px 0 rgba(255,255,255,0.08);
+    max-width: 400px;
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 16px;
+    border: 1px solid rgba(255, 213, 79, 0.15);
+    animation: fadeIn 0.4s ease;
   }
   .lobby-title {
-    font-size: 36px;
-    font-weight: 700;
-    color: #3E2723;
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--gold);
     text-align: center;
     margin: 0;
-    font-family: 'Noto Sans Tamil', 'Cormorant Garamond', serif;
+    letter-spacing: -0.01em;
+    font-family: 'Noto Sans Tamil', -apple-system, sans-serif;
+    text-shadow: 0 2px 12px rgba(255, 213, 79, 0.3);
   }
   .lobby-subtitle {
     text-align: center;
-    color: #6D4C41;
-    font-size: 11px;
+    color: var(--text-muted);
+    font-size: 12px;
     letter-spacing: 0.3em;
     text-transform: uppercase;
-    margin: -8px 0 8px;
+    margin: -10px 0 4px;
+    font-weight: 500;
   }
   .lobby-input {
     width: 100%;
-    padding: 12px 14px;
-    border-radius: 8px;
-    border: 2px solid #FBC02D;
-    background: #FFFDE7;
+    padding: 14px 16px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.25);
     font-size: 16px;
-    color: #3E2723;
+    color: var(--text-light);
     outline: none;
-    transition: border-color 0.2s;
+    transition: all 0.2s;
   }
-  .lobby-input:focus { border-color: #F57F17; }
+  .lobby-input::placeholder { color: var(--text-dim); }
+  .lobby-input:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(255, 213, 79, 0.15);
+  }
   .lobby-input.code-input {
     text-align: center;
-    font-size: 28px;
+    font-size: 32px;
     letter-spacing: 0.5em;
     font-weight: 700;
-    padding-left: 0.5em; /* offset the letter-spacing */
+    padding-left: 0.5em;
+    color: var(--gold);
   }
   .lobby-button {
     width: 100%;
     padding: 14px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     color: white;
     font-weight: 700;
-    font-size: 16px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    transition: transform 0.15s;
-    letter-spacing: 0.5px;
+    font-size: 15px;
+    transition: all 0.15s;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   }
-  .lobby-button:not(:disabled):hover { transform: scale(1.02); }
-  .lobby-button:not(:disabled):active { transform: scale(0.98); }
-  .lobby-button:disabled { opacity: 0.5; }
-  .btn-create { background: linear-gradient(135deg, #43A047, #1B5E20); }
-  .btn-join { background: linear-gradient(135deg, #1E88E5, #0D47A1); }
-  .btn-back { background: linear-gradient(135deg, #757575, #424242); padding: 10px; font-size: 14px; }
-  .btn-start { background: linear-gradient(135deg, #FF6F00, #E65100); }
+  .lobby-button:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,0.4); }
+  .lobby-button:not(:disabled):active { transform: translateY(0); }
+  .lobby-button:disabled { opacity: 0.4; }
+  .btn-create {
+    background: linear-gradient(180deg, #4CAF50 0%, #2E7D32 100%);
+    border: 1px solid #66BB6A;
+  }
+  .btn-join {
+    background: linear-gradient(180deg, #2196F3 0%, #0D47A1 100%);
+    border: 1px solid #42A5F5;
+  }
+  .btn-back {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+    padding: 10px;
+    font-size: 13px;
+    box-shadow: none;
+  }
+  .btn-back:not(:disabled):hover { background: rgba(255, 255, 255, 0.15); }
+  .btn-start {
+    background: linear-gradient(180deg, var(--gold) 0%, var(--gold-dark) 100%);
+    color: #1A2A5E;
+    border: 1px solid var(--gold-light);
+  }
 
   .divider {
     text-align: center;
-    color: #9E9E9E;
-    font-size: 12px;
+    color: var(--text-dim);
+    font-size: 11px;
     letter-spacing: 0.3em;
-    margin: 4px 0;
+    margin: 6px 0;
     position: relative;
+    font-weight: 500;
   }
   .divider::before, .divider::after {
     content: ""; position: absolute; top: 50%;
-    width: 35%; height: 1px; background: #E0E0E0;
+    width: 38%; height: 1px; background: rgba(255,255,255,0.15);
   }
   .divider::before { left: 0; }
   .divider::after { right: 0; }
 
   .room-code-display {
     text-align: center;
-    background: #FFFDE7;
-    border: 2px dashed #FBC02D;
-    padding: 18px;
-    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(255,213,79,0.1), rgba(255,213,79,0.04));
+    border: 1.5px dashed var(--gold);
+    padding: 22px;
+    border-radius: var(--radius);
   }
   .room-code-label {
     font-size: 11px;
-    color: #6D4C41;
+    color: var(--gold-light);
     letter-spacing: 0.3em;
     text-transform: uppercase;
-    margin: 0 0 6px;
+    margin: 0 0 8px;
+    font-weight: 600;
   }
   .room-code-value {
     font-size: 48px;
     font-weight: 900;
-    letter-spacing: 0.2em;
-    color: #3E2723;
-    font-family: Arial Black, Arial, sans-serif;
+    letter-spacing: 0.18em;
+    color: var(--gold);
     margin: 0;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 2px 12px rgba(255, 213, 79, 0.4);
   }
   .room-code-hint {
-    font-size: 11px;
-    color: #6D4C41;
-    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 10px;
   }
 
   .player-list {
-    background: #F5F5F5;
+    background: rgba(0, 0, 0, 0.2);
     padding: 12px;
-    border-radius: 8px;
+    border-radius: var(--radius);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
   }
   .player-item {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 10px 12px;
-    background: white;
-    border-radius: 8px;
-    border-left: 6px solid #ccc;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-sm);
     font-size: 14px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid transparent;
+    transition: all 0.2s;
   }
   .player-item.is-me {
-    background: linear-gradient(90deg, rgba(255, 214, 0, 0.15), white 60%);
-    border-left-width: 6px;
+    border-color: var(--gold);
+    background: linear-gradient(90deg, rgba(255,213,79,0.12) 0%, rgba(255,255,255,0.04) 70%);
   }
   .player-color-dot {
-    width: 26px; height: 26px;
+    width: 30px; height: 30px;
     border-radius: 50%;
     flex-shrink: 0;
-    border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.3);
+    border: 2px solid rgba(255,255,255,0.6);
   }
-  .player-name { font-weight: 600; color: #3E2723; flex: 1; font-size: 15px; }
+  .player-name { font-weight: 600; color: var(--text-light); flex: 1; font-size: 15px; }
   .player-color-name {
-    font-size: 11px;
-    color: #757575;
+    font-size: 12px;
+    color: var(--text-muted);
     font-weight: 500;
-    margin-top: 1px;
+    margin-top: 2px;
   }
-  .player-meta {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-  }
-  .player-role { font-size: 10px; color: #757575; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; }
+  .player-meta { display: flex; flex-direction: column; flex: 1; }
+  .player-role { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
   .you-badge {
-    background: #FFD600;
-    color: #3E2723;
-    font-size: 11px;
-    font-weight: 900;
-    padding: 3px 8px;
-    border-radius: 999px;
-    letter-spacing: 0.05em;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-    font-family: Arial Black, sans-serif;
+    background: var(--gold);
+    color: #1A2A5E;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 4px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.08em;
   }
 
   .error-msg {
-    background: #FFEBEE;
-    color: #C62828;
-    padding: 10px;
-    border-radius: 6px;
+    background: rgba(244, 67, 54, 0.15);
+    color: #FFAB91;
+    padding: 12px;
+    border-radius: var(--radius-sm);
     font-size: 13px;
     text-align: center;
-    border: 1px solid #FFCDD2;
+    border: 1px solid rgba(244, 67, 54, 0.3);
+    line-height: 1.5;
   }
   .info-msg {
-    background: #E3F2FD;
-    color: #1565C0;
-    padding: 10px;
-    border-radius: 6px;
+    background: rgba(33, 150, 243, 0.15);
+    color: #90CAF9;
+    padding: 12px;
+    border-radius: var(--radius-sm);
     font-size: 13px;
     text-align: center;
-    border: 1px solid #BBDEFB;
+    border: 1px solid rgba(33, 150, 243, 0.3);
+    line-height: 1.5;
   }
 
-  /* Connection status indicator */
+  /* ==========================================
+     CONNECTION STATUS
+     ========================================== */
   .conn-status {
     position: fixed;
-    top: 8px; right: 8px;
-    padding: 4px 10px;
+    top: 10px; right: 10px;
+    padding: 5px 12px;
     border-radius: 999px;
     font-size: 10px;
     font-weight: 700;
@@ -253,178 +349,277 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.1);
   }
-  .conn-status.online { background: #E8F5E9; color: #1B5E20; }
-  .conn-status.offline { background: #FFEBEE; color: #B71C1C; }
+  .conn-status.online { color: #66BB6A; }
+  .conn-status.offline { color: #EF5350; }
   .conn-dot {
-    width: 8px; height: 8px;
+    width: 6px; height: 6px;
     border-radius: 50%;
     background: currentColor;
   }
+  .conn-status.online .conn-dot { animation: dotPulse 2s ease-in-out infinite; box-shadow: 0 0 6px currentColor; }
 
-  /* ---- Game screen ---- */
+  /* ==========================================
+     GAME SCREEN — Ludo King theme
+     ========================================== */
   .app-root {
     min-height: 100vh;
     width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 12px;
-    background: linear-gradient(180deg, #FFF59D 0%, #FBC02D 100%);
+    padding: 14px 10px 18px;
+    position: relative;
+    z-index: 1;
   }
-  .title { text-align: center; margin-bottom: 8px; }
-  .title h1 {
-    font-size: clamp(22px, 5vw, 32px);
-    font-weight: 700;
-    color: #3E2723;
-    letter-spacing: 2px;
+
+  /* Title - now compact and gold */
+  .title-block {
+    text-align: center;
+    margin-bottom: 10px;
+    width: 100%;
+    max-width: 480px;
+  }
+  .title-block h1 {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--gold);
+    letter-spacing: 0.02em;
     margin: 0;
-    font-family: 'Noto Sans Tamil', 'Cormorant Garamond', serif;
+    font-family: 'Noto Sans Tamil', -apple-system, sans-serif;
+    text-shadow: 0 2px 8px rgba(255, 213, 79, 0.3);
   }
-  .title p {
-    font-size: 9px;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    color: #5D4037;
-    margin: 2px 0 0;
-  }
-  .room-info-bar {
-    display: flex;
+  .title-block .room-pill {
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    background: rgba(255,255,255,0.7);
-    padding: 4px 10px;
+    gap: 6px;
+    padding: 4px 12px;
     border-radius: 999px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255, 213, 79, 0.3);
     font-size: 11px;
-    color: #3E2723;
+    color: var(--text-muted);
     margin-top: 4px;
+    font-weight: 500;
   }
-  .room-info-bar strong { font-family: Arial Black; letter-spacing: 0.1em; }
+  .title-block .room-pill strong {
+    color: var(--gold);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.15em;
+    font-weight: 700;
+  }
 
-  /* My-color identity badge (always visible at top) */
-  .my-identity-badge {
+  /* Avatar grid wraps the board on top + bottom corners */
+  .avatar-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 480px;
+    margin: 6px 0;
+    gap: 6px;
+  }
+  .avatar-row.top { margin-top: 4px; }
+  .avatar-row.bottom { margin-top: 8px; }
+
+  .player-avatar {
+    background: linear-gradient(180deg, var(--card-dark) 0%, var(--card-darker) 100%);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 14px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 700;
-    color: white;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    margin-top: 6px;
-    border: 2px solid rgba(255,255,255,0.6);
+    border: 2px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.3s;
+    flex: 1;
+    min-width: 0;
+    max-width: 165px;
+    position: relative;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   }
-  .my-identity-coin {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    border: 2px solid white;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  .player-avatar.current {
+    border-color: var(--avatar-color, var(--gold));
+    box-shadow: 0 0 0 3px var(--avatar-color, var(--gold)), 0 0 18px 2px var(--avatar-color, var(--gold)), 0 4px 12px rgba(0,0,0,0.3);
+    transform: translateY(-2px);
   }
-  .my-identity-text {
-    letter-spacing: 0.5px;
-  }
-  .my-identity-tamil {
-    font-family: 'Noto Sans Tamil', serif;
-    margin-left: 4px;
-  }
-
-  /* "YOU" sticker overlay on the assigned yard */
-  .you-sticker {
+  .player-avatar.is-me::after {
+    content: "YOU";
     position: absolute;
-    top: -8px;
-    right: -6px;
-    background: #FFD600;
-    color: #3E2723;
-    font-size: 9px;
+    top: -7px;
+    right: 6px;
+    background: var(--gold);
+    color: #1A2A5E;
+    font-size: 8px;
     font-weight: 900;
     padding: 2px 6px;
-    border-radius: 999px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.25);
-    border: 1.5px solid white;
-    letter-spacing: 0.05em;
-    z-index: 5;
-    font-family: Arial Black, sans-serif;
+    border-radius: 4px;
+    letter-spacing: 0.08em;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    z-index: 2;
   }
+  .player-avatar.disconnected {
+    opacity: 0.4;
+    filter: grayscale(0.6);
+  }
+  .player-avatar.empty {
+    opacity: 0.35;
+    background: rgba(0,0,0,0.2);
+    border-style: dashed;
+  }
+  .avatar-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--avatar-color, #777);
+    border: 2.5px solid rgba(255,255,255,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 800;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.4);
+    text-transform: uppercase;
+  }
+  .player-avatar.current .avatar-circle {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.5), 0 0 0 2px white;
+  }
+  .avatar-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .avatar-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-light);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .avatar-progress {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: var(--gold);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .avatar-progress::before {
+    content: "⭐";
+    font-size: 10px;
+  }
+  .player-avatar.empty .avatar-circle {
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.3);
+    font-size: 18px;
+  }
+  .player-avatar.empty .avatar-name { color: rgba(255,255,255,0.3); font-style: italic; }
 
+  /* Board area */
   .board-area {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
+    margin: 6px 0;
   }
   .middle-row {
     display: flex;
     align-items: center;
     gap: 4px;
   }
-  .left-yard-slot, .right-yard-slot {
-    display: flex;
-    align-items: center;
-  }
 
+  /* Yard cards */
   .yard {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 4px;
     padding: 6px 8px;
-    border-radius: 8px;
-    transition: all 0.2s;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(180deg, var(--card-dark) 0%, var(--card-darker) 100%);
+    border: 2px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.3s;
     position: relative;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   }
   .yard.current {
-    box-shadow: 0 0 0 2px white, 0 0 0 4px rgba(0,0,0,0.05);
+    border-color: var(--yard-color);
+    box-shadow: 0 0 0 2px var(--yard-color), 0 0 16px 2px var(--yard-color);
   }
-  .yard.assigned {
-    box-shadow: 0 0 0 3px #FFD600, 0 0 0 5px rgba(0,0,0,0.05);
-    background: rgba(255, 214, 0, 0.08) !important;
-  }
-  .yard.assigned.current {
-    box-shadow: 0 0 0 3px #FFD600, 0 0 0 6px white, 0 0 12px 8px rgba(255, 214, 0, 0.3);
+  .yard.assigned::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--gold);
+    pointer-events: none;
   }
   .yard-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1px;
-  }
-  .yard-name-tag {
     font-size: 9px;
-    color: #424242;
-    background: rgba(255,255,255,0.8);
-    padding: 1px 6px;
-    border-radius: 999px;
-    margin-top: 2px;
-    max-width: 80px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--yard-color);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
   .yard-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 4px;
+    gap: 3px;
   }
   .yard-finished {
     font-size: 9px;
-    font-weight: 600;
+    font-weight: 700;
+    color: var(--gold);
   }
 
+  /* The 7x7 board — Ludo King look: white with gold frame */
   .board {
     position: relative;
     background: white;
-    padding: 6px;
-    width: min(70vw, 380px);
+    padding: 5px;
+    width: min(72vw, 380px);
     aspect-ratio: 1;
-    border: 4px solid #7B1FA2;
-    border-radius: 4px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    border-radius: var(--radius);
     flex-shrink: 0;
     transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 4px solid var(--gold);
+    box-shadow:
+      0 0 0 1px rgba(0,0,0,0.3),
+      0 0 0 6px var(--gold-dark),
+      0 12px 32px rgba(0,0,0,0.5),
+      inset 0 0 0 1px rgba(255,255,255,0.5);
   }
-
-  /* Counter-rotate cell contents so coins/X stay upright */
+  .board-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: repeat(7, 1fr);
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+    overflow: hidden;
+    background: white;
+  }
+  .cell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #C8CDD9;
+    aspect-ratio: 1;
+    transition: box-shadow 0.15s;
+    background: white;
+  }
   .cell-content-wrap {
     width: 100%;
     height: 100%;
@@ -434,29 +629,13 @@
     transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     transform: var(--counter-rotate, rotate(0deg));
   }
-  .board-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    grid-template-rows: repeat(7, 1fr);
-    width: 100%;
-    height: 100%;
-  }
-  .cell {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #B0B0B0;
-    aspect-ratio: 1;
-    transition: box-shadow 0.15s;
-  }
   .x-mark {
     position: absolute;
-    font-weight: 900;
-    font-family: Arial Black, Arial, sans-serif;
+    font-weight: 800;
+    font-family: -apple-system, sans-serif;
     pointer-events: none;
     user-select: none;
-    font-size: clamp(11px, 3.5vw, 20px);
+    font-size: clamp(11px, 3vw, 18px);
   }
   .coin-stack {
     position: relative;
@@ -473,177 +652,255 @@
   .coin {
     border-radius: 50%;
     transition: all 0.2s;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
   }
 
+  /* ==========================================
+     CONTROLS — bottom area
+     ========================================== */
   .controls {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 8px;
     width: 100%;
-    max-width: 400px;
-    margin-top: 12px;
+    max-width: 480px;
   }
-  .turn-pill {
-    padding: 6px 20px;
-    border-radius: 999px;
-    color: white;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    font-size: 13px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    font-family: 'Noto Sans Tamil', 'Cormorant Garamond', serif;
+
+  .turn-status-card {
+    background: linear-gradient(180deg, var(--card-dark) 0%, var(--card-darker) 100%);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    border: 2px solid rgba(255, 255, 255, 0.08);
+    width: 100%;
+    text-align: center;
+    transition: all 0.3s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   }
-  .your-turn-banner {
-    background: linear-gradient(90deg, #FFD600, #FFAB00);
-    color: #3E2723;
-    padding: 6px 18px;
-    border-radius: 999px;
-    font-size: 12px;
+  .turn-status-card.your-turn {
+    background: linear-gradient(180deg, rgba(255,213,79,0.15), rgba(255,213,79,0.05));
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px var(--gold), 0 0 16px 2px rgba(255,213,79,0.4);
+  }
+  .turn-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
     font-weight: 700;
-    letter-spacing: 0.1em;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    margin-bottom: 3px;
   }
-  .dice-row {
+  .turn-name {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--text-light);
+    letter-spacing: -0.01em;
+  }
+  .turn-status-card.your-turn .turn-label { color: var(--gold); }
+  .turn-status-card.your-turn .turn-name { color: var(--gold); }
+
+  /* Dice card */
+  .dice-card {
+    background: linear-gradient(180deg, var(--card-dark) 0%, var(--card-darker) 100%);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    border: 2px solid rgba(255, 255, 255, 0.08);
+    width: 100%;
     display: flex;
     align-items: center;
-    gap: 16px;
-    background: rgba(255,255,255,0.85);
-    padding: 14px 20px;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    justify-content: space-between;
+    gap: 12px;
     transition: opacity 0.3s, filter 0.3s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   }
-  .dice-row.disabled {
+  .dice-card.disabled {
     opacity: 0.45;
-    filter: grayscale(0.6);
+    filter: grayscale(0.7);
     pointer-events: none;
-    background: rgba(220,220,220,0.5);
-    box-shadow: none;
+  }
+  .dice-sticks {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex-shrink: 0;
   }
   .stick-die {
-    width: 100px;
-    height: 22px;
-    border-radius: 3px;
-    border: 1.5px solid #8b6914;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+    width: 80px;
+    height: 18px;
+    border-radius: 4px;
+    border: 1px solid #8B6914;
+    background: linear-gradient(180deg, #FFD27A 0%, #D4AF37 100%);
     display: flex;
     align-items: center;
     justify-content: space-around;
-    padding: 0 12px;
+    padding: 0 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.4);
   }
-  .stick-die-empty { background: linear-gradient(180deg, #d4af37, #b8941f); }
-  .stick-die-rolled { background: linear-gradient(180deg, #f4d27a, #d4af37); }
+  .stick-die-empty {
+    background: linear-gradient(180deg, #4A5070 0%, #2A3050 100%);
+    border-color: #1A2040;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+  }
   .stick-dot {
-    width: 8px; height: 8px;
+    width: 6px; height: 6px;
     border-radius: 50%;
-    background: #3a2510;
-    box-shadow: inset 0 1px 1px rgba(0,0,0,0.4);
+    background: #2a1810;
+    box-shadow: inset 0 1px 1px rgba(0,0,0,0.5);
   }
-  .total-box { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+
+  .total-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
   .total-label {
-    font-size: 10px;
-    color: #57534E;
+    font-size: 9px;
+    color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: 1.5px;
+    letter-spacing: 0.18em;
     font-weight: 700;
   }
   .total-value {
-    width: 64px; height: 64px;
-    border-radius: 10px;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 36px;
+    font-size: 32px;
     font-weight: 900;
     background: white;
-    box-shadow: inset 0 2px 6px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.1);
-    color: #000 !important;
-    font-family: Arial Black, Arial, sans-serif;
+    border: 3px solid var(--gold-dark);
+    color: #1A2A5E;
+    font-variant-numeric: tabular-nums;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4), inset 0 2px 4px rgba(0,0,0,0.05);
   }
+  .total-value.has-value {
+    border-color: var(--gold);
+    box-shadow: 0 0 12px rgba(255,213,79,0.4), 0 4px 8px rgba(0,0,0,0.4);
+  }
+
   .roll-button {
-    padding: 14px 28px;
-    border-radius: 10px;
-    color: white;
-    font-weight: 700;
-    font-size: 18px;
-    letter-spacing: 0.5px;
-    box-shadow: 0 6px 12px rgba(0,0,0,0.2);
-    transition: transform 0.15s;
-    min-width: 90px;
+    padding: 14px 24px;
+    border-radius: var(--radius-sm);
+    color: #1A2A5E;
+    font-weight: 900;
+    font-size: 16px;
+    letter-spacing: 0.08em;
+    transition: all 0.15s;
+    min-width: 92px;
+    text-transform: uppercase;
+    background: linear-gradient(180deg, var(--gold) 0%, var(--gold-dark) 100%);
+    border: 2px solid var(--gold-light);
+    box-shadow: 0 4px 12px rgba(255,213,79,0.4), inset 0 1px 0 rgba(255,255,255,0.5);
+    text-shadow: 0 1px 0 rgba(255,255,255,0.3);
   }
-  .roll-button:not(:disabled):hover { transform: scale(1.05); }
-  .roll-button:not(:disabled):active { transform: scale(0.98); }
-  .roll-button:disabled { opacity: 0.5; }
+  .roll-button:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(255,213,79,0.5); }
+  .roll-button:not(:disabled):active { transform: translateY(0); }
+  .roll-button:disabled {
+    background: linear-gradient(180deg, #4A5070 0%, #2A3050 100%);
+    color: #7388B8;
+    border-color: #1A2040;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    text-shadow: none;
+  }
 
   .message-box {
-    padding: 8px 12px;
-    border-radius: 6px;
-    background: rgba(255,255,255,0.9);
-    color: #292524;
-    font-size: 12px;
+    background: rgba(0,0,0,0.3);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    color: var(--text-light);
+    font-size: 13px;
     text-align: center;
     width: 100%;
-    min-height: 40px;
+    min-height: 42px;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-    border: 1px solid rgba(139, 105, 20, 0.3);
-    line-height: 1.4;
+    border: 1px solid rgba(255,255,255,0.08);
+    line-height: 1.5;
   }
   .pending-box {
-    font-size: 10px;
-    color: #44403C;
-    background: rgba(255,255,255,0.7);
+    font-size: 11px;
+    color: var(--gold);
+    background: rgba(0,0,0,0.3);
     padding: 4px 12px;
     border-radius: 999px;
+    border: 1px solid rgba(255, 213, 79, 0.3);
+    font-weight: 600;
+  }
+  .pending-box strong {
+    color: var(--gold-light);
+    font-weight: 800;
   }
   .legend {
-    color: #44403C;
-    font-size: 9px;
+    color: var(--text-dim);
+    font-size: 10px;
     text-align: center;
-    max-width: 320px;
-    line-height: 1.5;
+    max-width: 360px;
+    line-height: 1.6;
     margin-top: 4px;
   }
+  .legend strong { color: var(--gold-light); }
   .play-again {
     margin-top: 8px;
-    padding: 10px 24px;
-    border-radius: 8px;
-    color: white;
-    font-weight: 700;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
-    font-size: 14px;
-  }
-  .leave-room-btn {
-    margin-top: 8px;
-    padding: 6px 14px;
-    border-radius: 6px;
-    background: rgba(0,0,0,0.1);
-    color: #5D4037;
-    font-size: 11px;
+    padding: 14px 32px;
+    border-radius: var(--radius-sm);
+    color: #1A2A5E;
+    font-weight: 900;
+    font-size: 15px;
+    background: linear-gradient(180deg, var(--gold) 0%, var(--gold-dark) 100%);
+    border: 2px solid var(--gold-light);
+    box-shadow: 0 6px 18px rgba(255,213,79,0.4);
+    text-transform: uppercase;
     letter-spacing: 0.05em;
   }
+  .leave-room-btn {
+    margin-top: 4px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+  }
+  .leave-room-btn:hover {
+    color: var(--text-muted);
+    border-color: rgba(255,255,255,0.15);
+  }
 
-  /* Mobile layout */
+  /* ==========================================
+     MOBILE LAYOUT
+     ========================================== */
   @media (max-width: 900px) {
-    .app-root { padding: 6px; }
-    .board { width: min(62vw, 320px); padding: 4px; border-width: 3px; }
-    .middle-row { gap: 2px; }
-    .board-area { gap: 2px; }
-    .yard { padding: 4px 6px; gap: 3px; }
+    .app-root { padding: 10px 6px 16px; }
+    .board { width: min(70vw, 320px); padding: 4px; border-width: 3px; }
+    .middle-row { gap: 3px; }
+    .board-area { gap: 4px; }
+    .yard { padding: 5px 6px; gap: 3px; }
     .yard-grid { gap: 2px; }
-    .yard-label { font-size: 9px; }
+    .yard-label { font-size: 8px; }
     .yard-finished { font-size: 8px; }
-    .yard-name-tag { font-size: 8px; max-width: 60px; }
-    .yard-grid svg { width: 16px !important; }
-    .controls { max-width: 100%; margin-top: 8px; }
+    .yard-grid svg { width: 14px !important; }
+    .player-avatar { padding: 6px 8px; gap: 6px; }
+    .avatar-circle { width: 30px; height: 30px; font-size: 12px; }
+    .avatar-name { font-size: 10px; }
+    .avatar-progress { font-size: 9px; }
+    .stick-die { width: 64px; }
+    .total-value { width: 48px; height: 48px; font-size: 26px; }
+    .roll-button { padding: 12px 18px; font-size: 14px; min-width: 78px; }
+    .turn-name { font-size: 15px; }
   }
   @media (max-width: 380px) {
-    .board { width: 58vw; }
-    .yard { padding: 3px 4px; }
+    .board { width: 60vw; }
+    .yard { padding: 4px; }
+    .stick-die { width: 56px; }
+    .player-avatar { padding: 5px 6px; }
+    .avatar-name { font-size: 9px; }
   }
 </style>
 </head>
@@ -714,6 +971,8 @@ function innerRingCounterClockwise() {
 const OUTER = outerRingCounterClockwise();
 const MIDDLE = middleRingCounterClockwise();
 const INNER = innerRingCounterClockwise();
+const MIDDLE_RING_START = OUTER.length; // 24 — index where middle ring begins on each player's path
+const INNER_RING_START = OUTER.length + MIDDLE.length; // 40 — index where inner ring begins
 const CENTER = "3,3";
 const ENTRY_SQUARE_V2 = { green: "0,3", red: "3,0", yellow: "3,6", blue: "6,3" };
 
@@ -764,25 +1023,26 @@ function generatePlayerId() {
 // LOBBY COMPONENT
 // ============================================================
 
-function Lobby({ onJoinRoom }) {
-  const [mode, setMode] = useState("home"); // home | create | join
+function Lobby({ onJoinRoom, onStartSolo }) {
+  const [mode, setMode] = useState("home"); // home | mode-select | create | join | solo-select
   const [name, setName] = useState(localStorage.getItem("thaayam_name") || "");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [maxPlayers, setMaxPlayers] = useState(4); // for online room
+  const [aiCount, setAiCount] = useState(1); // for solo mode
 
   const saveName = (n) => {
     setName(n);
     localStorage.setItem("thaayam_name", n);
   };
 
-  const handleCreate = async () => {
+  const handleCreate = async (chosenMaxPlayers) => {
     setError("");
     if (!name.trim()) { setError("Please enter your name"); return; }
     if (!firebaseReady) { setError("Firebase not configured. Please add config in the HTML file."); return; }
     setBusy(true);
     try {
-      // Generate unique room code (try a few times if collision)
       let roomCode;
       for (let i = 0; i < 5; i++) {
         roomCode = generateRoomCode();
@@ -792,7 +1052,8 @@ function Lobby({ onJoinRoom }) {
       const playerId = generatePlayerId();
       const roomData = {
         host: playerId,
-        status: "waiting", // waiting | playing | finished
+        status: "waiting",
+        maxPlayers: chosenMaxPlayers || 4,
         createdAt: firebase.database.ServerValue.TIMESTAMP,
         players: {
           [playerId]: {
@@ -805,7 +1066,6 @@ function Lobby({ onJoinRoom }) {
         gameState: null,
       };
       await db.ref(`rooms/${roomCode}`).set(roomData);
-      // Set onDisconnect to mark offline
       db.ref(`rooms/${roomCode}/players/${playerId}/online`).onDisconnect().set(false);
       onJoinRoom(roomCode, playerId, "red");
     } catch (e) {
@@ -829,8 +1089,23 @@ function Lobby({ onJoinRoom }) {
       if (room.status === "finished") { setError("This game has already ended"); setBusy(false); return; }
 
       const usedColors = new Set(Object.values(room.players || {}).map(p => p.color));
-      const availableColor = PLAYER_ORDER.find(c => !usedColors.has(c));
-      if (!availableColor) { setError("Room is full (4 players max)"); setBusy(false); return; }
+      const playerCount = Object.keys(room.players || {}).length;
+      const maxPlayers = room.maxPlayers || 4;
+      if (playerCount >= maxPlayers) {
+        setError(`Room is full (${maxPlayers} player${maxPlayers > 1 ? 's' : ''} max)`);
+        setBusy(false);
+        return;
+      }
+      // For 2-player rooms, use opposite colors: red (host) and yellow (joiner)
+      // For 4-player rooms, use PLAYER_ORDER sequence
+      let availableColor;
+      if (maxPlayers === 2) {
+        const colorPool = ["red", "yellow"]; // opposite-side colors
+        availableColor = colorPool.find(c => !usedColors.has(c));
+      } else {
+        availableColor = PLAYER_ORDER.find(c => !usedColors.has(c));
+      }
+      if (!availableColor) { setError("Room is full"); setBusy(false); return; }
 
       const playerId = generatePlayerId();
       await db.ref(`rooms/${code}/players/${playerId}`).set({
@@ -848,32 +1123,15 @@ function Lobby({ onJoinRoom }) {
     setBusy(false);
   };
 
-  if (!firebaseReady) {
-    return (
-      <div className="screen">
-        <div className="lobby-card">
-          <h1 className="lobby-title">தாயம்</h1>
-          <p className="lobby-subtitle">Setup Required</p>
-          <div className="error-msg" style={{textAlign:"left", lineHeight: 1.5}}>
-            <strong>Firebase not configured.</strong><br/><br/>
-            To enable online multiplayer:<br/>
-            1. Create a free Firebase project at <strong>console.firebase.google.com</strong><br/>
-            2. Enable Realtime Database (test mode)<br/>
-            3. Open <strong>firebase-config.js</strong><br/>
-            4. Paste your config values from Firebase<br/>
-            5. Save and reload this page
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Firebase not ready: still allow solo (vs AI) play, but disable online options
+  // Don't return early — show the regular lobby with online buttons disabled.
 
   if (mode === "home") {
     return (
       <div className="screen">
         <div className="lobby-card">
           <h1 className="lobby-title">தாயம் · Thaayam</h1>
-          <p className="lobby-subtitle">Online Multiplayer</p>
+          <p className="lobby-subtitle">Traditional Tamil Board Game</p>
           <input
             className="lobby-input"
             placeholder="Your name"
@@ -881,11 +1139,30 @@ function Lobby({ onJoinRoom }) {
             onChange={(e) => saveName(e.target.value)}
             maxLength={20}
           />
-          <button className="lobby-button btn-create" onClick={() => { if (name.trim()) setMode("create"); else setError("Enter your name first"); }}>
+          <button
+            className="lobby-button btn-start"
+            onClick={() => { if (name.trim()) { setMode("solo-select"); setError(""); } else setError("Enter your name first"); }}
+          >
+            🤖 Play vs AI (Solo)
+          </button>
+          <div className="divider">OR PLAY ONLINE</div>
+          {!firebaseReady && (
+            <div className="info-msg" style={{fontSize: "12px"}}>
+              Online multiplayer requires Firebase setup. See <strong>firebase-config.js</strong>. Solo mode works fine!
+            </div>
+          )}
+          <button
+            className="lobby-button btn-create"
+            onClick={() => { if (name.trim()) { setMode("mode-select"); setError(""); } else setError("Enter your name first"); }}
+            disabled={!firebaseReady}
+          >
             🎲 Create Room
           </button>
-          <div className="divider">OR</div>
-          <button className="lobby-button btn-join" onClick={() => { if (name.trim()) setMode("join"); else setError("Enter your name first"); }}>
+          <button
+            className="lobby-button btn-join"
+            onClick={() => { if (name.trim()) { setMode("join"); setError(""); } else setError("Enter your name first"); }}
+            disabled={!firebaseReady}
+          >
             🔗 Join Room
           </button>
           {error && <div className="error-msg">{error}</div>}
@@ -894,14 +1171,62 @@ function Lobby({ onJoinRoom }) {
     );
   }
 
-  if (mode === "create") {
+  if (mode === "solo-select") {
+    return (
+      <div className="screen">
+        <div className="lobby-card">
+          <h1 className="lobby-title">Play vs AI</h1>
+          <p className="lobby-subtitle">Choose Number of Bots</p>
+          <div className="info-msg">Welcome, <strong>{name}</strong>! Pick how many AI opponents you want.</div>
+          <button
+            className="lobby-button btn-start"
+            onClick={() => onStartSolo(name.trim(), 1)}
+            disabled={busy}
+          >
+            🤖 1 Bot · 2 Players Total
+          </button>
+          <button
+            className="lobby-button btn-start"
+            onClick={() => onStartSolo(name.trim(), 2)}
+            disabled={busy}
+          >
+            🤖🤖 2 Bots · 3 Players Total
+          </button>
+          <button
+            className="lobby-button btn-start"
+            onClick={() => onStartSolo(name.trim(), 3)}
+            disabled={busy}
+          >
+            🤖🤖🤖 3 Bots · 4 Players Total
+          </button>
+          <button className="lobby-button btn-back" onClick={() => { setMode("home"); setError(""); }}>
+            ← Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === "mode-select") {
     return (
       <div className="screen">
         <div className="lobby-card">
           <h1 className="lobby-title">Create Room</h1>
-          <div className="info-msg">Welcome, <strong>{name}</strong>! Click below to create a room and get a 4-digit code to share.</div>
-          <button className="lobby-button btn-create" onClick={handleCreate} disabled={busy}>
-            {busy ? "Creating..." : "🎲 Create Now"}
+          <p className="lobby-subtitle">Choose Player Count</p>
+          <div className="info-msg">Welcome, <strong>{name}</strong>! How many players will be in this room?</div>
+          <button
+            className="lobby-button btn-create"
+            onClick={() => handleCreate(2)}
+            disabled={busy}
+          >
+            {busy ? "Creating..." : "👥 2 Players"}
+          </button>
+          <button
+            className="lobby-button btn-create"
+            onClick={() => handleCreate(4)}
+            disabled={busy}
+          >
+            {busy ? "Creating..." : "👥👥 Up to 4 Players"}
           </button>
           {error && <div className="error-msg">{error}</div>}
           <button className="lobby-button btn-back" onClick={() => { setMode("home"); setError(""); }}>
@@ -949,7 +1274,10 @@ function WaitingRoom({ roomCode, playerId, room, onStart, onLeave }) {
   const isHost = room.host === playerId;
   const players = Object.entries(room.players || {});
   const me = room.players[playerId];
-  const canStart = isHost && players.length >= 2;
+  const maxPlayers = room.maxPlayers || 4;
+  const canStart = isHost && (
+    maxPlayers === 2 ? players.length === 2 : players.length >= 2
+  );
 
   const handleStart = async () => {
     const initialState = {
@@ -959,6 +1287,7 @@ function WaitingRoom({ roomCode, playerId, room, onStart, onLeave }) {
       diceValue: null,
       hasRolled: false,
       pendingValues: [],
+      killers: {}, // colors that have made at least one capture (unlocks middle ring)
       message: "Game started! First coin needs a 1 to enter.",
       winner: null,
       lastMoveBy: null,
@@ -975,7 +1304,9 @@ function WaitingRoom({ roomCode, playerId, room, onStart, onLeave }) {
         <div className="room-code-display">
           <p className="room-code-label">Room Code</p>
           <p className="room-code-value">{roomCode}</p>
-          <p className="room-code-hint">Share this code with friends to join</p>
+          <p className="room-code-hint">
+            Share with friends · {maxPlayers}-player room
+          </p>
         </div>
 
         <div className="player-list">
@@ -990,20 +1321,20 @@ function WaitingRoom({ roomCode, playerId, room, onStart, onLeave }) {
               }} />
               <div className="player-meta">
                 <span className="player-name">{p.name}</span>
-                <span className="player-color-name" style={{color: COLORS[p.color].dark}}>
+                <span className="player-color-name" style={{color: COLORS[p.color].main}}>
                   {COLORS[p.color].label} · {COLORS[p.color].name}
                 </span>
               </div>
               {pid === playerId && <span className="you-badge">YOU</span>}
               {pid === room.host && <span className="player-role">HOST</span>}
-              {!p.online && <span className="player-role" style={{color:"#C62828"}}>OFFLINE</span>}
+              {!p.online && <span className="player-role" style={{color:"#EF5350"}}>OFFLINE</span>}
             </div>
           ))}
-          {Array.from({ length: 4 - players.length }).map((_, i) => (
-            <div key={`waiting-${i}`} className="player-item" style={{opacity:0.5, borderLeftColor:"#ccc"}}>
-              <div className="player-color-dot" style={{background:"#E0E0E0"}} />
+          {Array.from({ length: maxPlayers - players.length }).map((_, i) => (
+            <div key={`waiting-${i}`} className="player-item" style={{opacity:0.5, borderLeftColor:"#888"}}>
+              <div className="player-color-dot" style={{background:"#444"}} />
               <div className="player-meta">
-                <span className="player-name" style={{fontStyle:"italic", color:"#9E9E9E"}}>Waiting for player...</span>
+                <span className="player-name" style={{fontStyle:"italic", color:"#888"}}>Waiting for player...</span>
               </div>
             </div>
           ))}
@@ -1011,7 +1342,9 @@ function WaitingRoom({ roomCode, playerId, room, onStart, onLeave }) {
 
         {isHost ? (
           <button className="lobby-button btn-start" onClick={handleStart} disabled={!canStart}>
-            {players.length < 2 ? "Need at least 2 players" : `▶️ Start Game (${players.length} players)`}
+            {players.length < 2 ? "Need at least 2 players" :
+             (maxPlayers === 2 && players.length < 2) ? "Waiting for opponent..." :
+             `▶️ Start Game (${players.length} player${players.length > 1 ? 's' : ''})`}
           </button>
         ) : (
           <div className="info-msg">Waiting for host to start the game...</div>
@@ -1050,6 +1383,7 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
   const pendingValues = gs.pendingValues || [];
   const message = gs.message || "";
   const winner = gs.winner;
+  const killers = gs.killers || {}; // { red: true, green: true } — colors that have made a kill
 
   const isMyTurn = myColor === currentPlayer;
   const myPlayerKey = Object.keys(players).find(pid => players[pid].color === currentPlayer);
@@ -1103,24 +1437,35 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
   const finishedCount = (color) =>
     Object.values(coins).filter((c) => c.color === color && c.finished).length;
 
+  // Helper: can a specific coin move by `v` steps, given the killer rule?
+  const canCoinUseValue = (coin, v, color, hasKilledFlag, onBoardFlag) => {
+    if (coin.pathIndex === -1) {
+      if (!onBoardFlag && v === 1) return true;
+      if (onBoardFlag && ENTRY_VALUES.has(v)) return true;
+      return false;
+    }
+    const newIdx = coin.pathIndex + v;
+    if (newIdx >= PATHS[color].length) return false;
+    if (newIdx >= MIDDLE_RING_START && !hasKilledFlag) return false;
+    return true;
+  };
+
   const getMovableCoins = useMemo(() => {
     if (!hasRolled || pendingValues.length === 0 || !isMyTurn) return {};
     const movable = {};
     const onBoardFlag = hasCoinOnBoard(currentPlayer);
+    const hasKilledFlag = !!killers[currentPlayer];
     Object.entries(coins).forEach(([id, coin]) => {
       if (coin.color !== currentPlayer || coin.finished) return;
       for (const v of pendingValues) {
-        if (coin.pathIndex === -1) {
-          if (!onBoardFlag && v === 1) { movable[id] = v; return; }
-          if (onBoardFlag && ENTRY_VALUES.has(v)) { movable[id] = v; return; }
-        } else {
-          const newIdx = coin.pathIndex + v;
-          if (newIdx < PATHS[currentPlayer].length) { movable[id] = v; return; }
+        if (canCoinUseValue(coin, v, currentPlayer, hasKilledFlag, onBoardFlag)) {
+          movable[id] = v;
+          return;
         }
       }
     });
     return movable;
-  }, [coins, currentPlayer, pendingValues, hasRolled, isMyTurn]);
+  }, [coins, currentPlayer, pendingValues, hasRolled, isMyTurn, JSON.stringify(killers)]);
 
   // Sync state to firebase (only the current player can modify game state)
   const updateGS = (updates) => db.ref(`rooms/${roomCode}/gameState`).update(updates);
@@ -1172,16 +1517,13 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
   const evaluateRoll = async (value, allValues) => {
     if (!isMyTurn) return;
     const onBoardFlag = hasCoinOnBoard(currentPlayer);
+    const hasKilledFlag = !!killers[currentPlayer];
 
     const movableForThisValue = {};
     Object.entries(coins).forEach(([id, coin]) => {
       if (coin.color !== currentPlayer || coin.finished) return;
-      if (coin.pathIndex === -1) {
-        if (!onBoardFlag && value === 1) movableForThisValue[id] = value;
-        if (onBoardFlag && ENTRY_VALUES.has(value)) movableForThisValue[id] = value;
-      } else {
-        const newIdx = coin.pathIndex + value;
-        if (newIdx < PATHS[currentPlayer].length) movableForThisValue[id] = value;
+      if (canCoinUseValue(coin, value, currentPlayer, hasKilledFlag, onBoardFlag)) {
+        movableForThisValue[id] = value;
       }
     });
 
@@ -1189,12 +1531,9 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
     Object.entries(coins).forEach(([id, coin]) => {
       if (coin.color !== currentPlayer || coin.finished) return;
       for (const v of allValues) {
-        if (coin.pathIndex === -1) {
-          if (!onBoardFlag && v === 1) { movableAny[id] = v; return; }
-          if (onBoardFlag && ENTRY_VALUES.has(v)) { movableAny[id] = v; return; }
-        } else {
-          const newIdx = coin.pathIndex + v;
-          if (newIdx < PATHS[currentPlayer].length) { movableAny[id] = v; return; }
+        if (canCoinUseValue(coin, v, currentPlayer, hasKilledFlag, onBoardFlag)) {
+          movableAny[id] = v;
+          return;
         }
       }
     });
@@ -1270,14 +1609,12 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
     if (!coin || coin.color !== currentPlayer || coin.finished) return;
 
     const onBoardFlag = hasCoinOnBoard(currentPlayer);
+    const hasKilledFlag = !!killers[currentPlayer];
     let usedValue = null;
     for (const v of pendingValues) {
-      if (coin.pathIndex === -1) {
-        if (!onBoardFlag && v === 1) { usedValue = v; break; }
-        if (onBoardFlag && ENTRY_VALUES.has(v)) { usedValue = v; break; }
-      } else {
-        const newIdx = coin.pathIndex + v;
-        if (newIdx < PATHS[currentPlayer].length) { usedValue = v; break; }
+      if (canCoinUseValue(coin, v, currentPlayer, hasKilledFlag, onBoardFlag)) {
+        usedValue = v;
+        break;
       }
     }
     if (usedValue === null) return;
@@ -1332,17 +1669,23 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
     const finishedNow = Object.values(newCoins).filter((c) => c.color === currentPlayer && c.finished).length;
     const isWinner = finishedNow === 6;
 
+    // 🎯 Killer rule: track first-time captures
+    const wasFirstKill = captured && !killers[currentPlayer];
+    const newKillers = wasFirstKill ? { ...killers, [currentPlayer]: true } : killers;
+
     const remaining = [...pendingValues];
     remaining.splice(remaining.indexOf(usedValue), 1);
 
     let msg = `${currentPlayerName} moved ${usedValue} step${usedValue > 1 ? "s" : ""}.`;
     if (captured) msg += ` 💥 Captured ${capturedNames.join(", ")}!`;
+    if (wasFirstKill) msg += " 🔓 Middle ring unlocked!";
     if (finished) msg += " ⭐ Reached center!";
     if (SAFE_SQUARES.has(finalSquare) && !finished && coin.pathIndex !== -1) msg += " 🛡️ Safe on X.";
 
     if (isWinner) {
       await updateGS({
         coins: newCoins,
+        killers: newKillers,
         winner: currentPlayer,
         message: `🎉 ${currentPlayerName} wins! All 6 coins reached the center!`,
       });
@@ -1355,6 +1698,7 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
       msg += ` Remaining: [${remaining.join(", ")}].`;
       await updateGS({
         coins: newCoins,
+        killers: newKillers,
         pendingValues: remaining,
         message: msg,
       });
@@ -1364,6 +1708,7 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
         msg += " Roll again!";
         await updateGS({
           coins: newCoins,
+          killers: newKillers,
           pendingValues: [],
           hasRolled: false,
           diceValue: null,
@@ -1375,16 +1720,15 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
         const idx = activeColors.indexOf(currentPlayer);
         const next = activeColors[(idx + 1) % activeColors.length];
         const nextPlayer = getPlayerByColor(next);
-        // Brief pause so player sees the "Turn ends" message, then update
         await updateGS({
           coins: newCoins,
+          killers: newKillers,
           pendingValues: [],
           hasRolled: false,
           diceValue: null,
           dice: [null, null],
           message: msg,
         });
-        // Pause briefly, then advance the turn
         await new Promise((r) => setTimeout(r, 350));
         await updateGS({
           currentPlayer: next,
@@ -1527,11 +1871,16 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
     const player = getPlayerByColor(color);
     const isMine = color === myColor;
 
+    const yardTint = `${COLORS[color].main}1A`; // ~10% alpha hex
+
     return (
-      <div className={`yard ${isCurrent ? "current" : ""} ${isMine ? "assigned" : ""}`} style={{
-        background: isCurrent ? COLORS[color].light : "transparent",
-      }}>
-        {isMine && <div className="you-sticker">YOU</div>}
+      <div
+        className={`yard ${isCurrent ? "current" : ""} ${isMine ? "assigned" : ""}`}
+        style={{
+          '--yard-color': COLORS[color].main,
+          '--yard-tint': yardTint,
+        }}
+      >
         <div className="yard-label" style={{ color: COLORS[color].dark }}>
           {COLORS[color].label}
         </div>
@@ -1546,14 +1895,7 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
             </div>
           ))}
         </div>
-        <div className="yard-finished" style={{ color: COLORS[color].dark }}>
-          ⭐ {finished}/6
-        </div>
-        {player && (
-          <div className="yard-name-tag" title={player.name}>
-            {player.name}{isMine ? " (You)" : ""}
-          </div>
-        )}
+        <div className="yard-finished">⭐ {finished}/6</div>
       </div>
     );
   };
@@ -1563,46 +1905,102 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
     const dots = [];
     for (let i = 0; i < value; i++) dots.push(<div key={i} className="stick-dot"></div>);
     return (
-      <div className="stick-die stick-die-rolled">
-        {value === 0 ? <span style={{fontSize:"8px", color:"#44403C", fontWeight:700}}>FLAT</span> : dots}
+      <div className="stick-die">
+        {value === 0 ? <span style={{fontSize:"9px", color:"#3a2510", fontWeight:700, letterSpacing:"0.05em"}}>FLAT</span> : dots}
       </div>
     );
   };
 
   const displayDice = rolling ? localDice : dice;
 
+  // Hex-to-rgba helper for player tints
+  const hexToRgba = (hex, alpha) => {
+    const h = hex.replace('#', '');
+    const r = parseInt(h.substring(0,2), 16);
+    const g = parseInt(h.substring(2,4), 16);
+    const b = parseInt(h.substring(4,6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
+  const myMain = COLORS[myColor]?.main || '#6B7280';
+  const myLight = COLORS[myColor]?.light || '#F3F4F6';
+
+  // CSS variables to inject across the app for dynamic theming
+  const themeStyle = {
+    '--player-color': myMain,
+    '--player-tint': hexToRgba(myMain, 0.08),
+    '--player-tint-strong': hexToRgba(myMain, 0.18),
+  };
+
+  // Build player roster (in PLAYER_ORDER for consistent layout)
+  // Build avatar for a single color slot. Renders empty placeholder if no player has that color.
+  const renderAvatar = (color, slot) => {
+    const playerEntry = Object.entries(players).find(([_, p]) => p.color === color);
+    if (!playerEntry) {
+      return (
+        <div key={`empty-${color}`} className="player-avatar empty">
+          <div className="avatar-circle" style={{ '--avatar-color': COLORS[color].main }}>?</div>
+          <div className="avatar-info">
+            <div className="avatar-name">Waiting...</div>
+            <div className="avatar-progress" style={{visibility:'hidden'}}>0/6</div>
+          </div>
+        </div>
+      );
+    }
+    const [pid, p] = playerEntry;
+    const isCurrent = currentPlayer === color;
+    const isMine = pid === playerId;
+    const finished = finishedCount(color);
+    const initial = (p.name || '?').charAt(0).toUpperCase();
+    const isUnlocked = !!killers[color];
+
+    return (
+      <div
+        key={pid}
+        className={`player-avatar ${isCurrent ? 'current' : ''} ${isMine ? 'is-me' : ''} ${!p.online ? 'disconnected' : ''}`}
+        style={{ '--avatar-color': COLORS[color].main }}
+      >
+        <div className="avatar-circle" style={{ '--avatar-color': COLORS[color].main }}>
+          {initial}
+        </div>
+        <div className="avatar-info">
+          <div className="avatar-name" title={p.name}>{p.name}</div>
+          <div className="avatar-progress">
+            {finished}/6 {isUnlocked ? '🔓' : '🔒'}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="app-root">
-      <div className="title">
+    <div className="app-root" style={themeStyle}>
+      {/* Title */}
+      <div className="title-block">
         <h1>தாயம் · Thaayam</h1>
-        <p>Online · Room {roomCode}</p>
+        <div className="room-pill">
+          <span>Room</span> <strong>{roomCode}</strong>
+        </div>
       </div>
 
-      <div className="room-info-bar">
-        Room: <strong>{roomCode}</strong>
+      {/* Top avatar row — opponents */}
+      <div className="avatar-row top">
+        {activeColors.includes(yardSlots.top) && renderAvatar(yardSlots.top)}
+        {activeColors.includes(yardSlots.right) && renderAvatar(yardSlots.right)}
       </div>
 
-      <div className="my-identity-badge" style={{
-        background: `linear-gradient(135deg, ${COLORS[myColor]?.main}, ${COLORS[myColor]?.dark})`,
-      }}>
-        <div className="my-identity-coin" style={{
-          background: `radial-gradient(circle at 30% 30%, ${COLORS[myColor]?.light}, ${COLORS[myColor]?.main} 60%, ${COLORS[myColor]?.dark})`,
-        }} />
-        <span className="my-identity-text">
-          You are {me?.name} · {COLORS[myColor]?.label}
-        </span>
-        <span className="my-identity-tamil">({COLORS[myColor]?.name})</span>
-      </div>
-
+      {/* Board area */}
       <div className="board-area">
-        {renderYard(yardSlots.top)}
+        {activeColors.includes(yardSlots.top) && renderYard(yardSlots.top)}
         <div className="middle-row">
-          <div className="left-yard-slot">{renderYard(yardSlots.left)}</div>
+          <div className="left-yard-slot">
+            {activeColors.includes(yardSlots.left) && renderYard(yardSlots.left)}
+          </div>
           <div
             className="board"
             style={{
               transform: `rotate(${myRotation}deg)`,
-              "--counter-rotate": `rotate(${-myRotation}deg)`,
+              '--counter-rotate': `rotate(${-myRotation}deg)`,
             }}
           >
             <div className="board-grid">
@@ -1611,28 +2009,40 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
               )}
             </div>
           </div>
-          <div className="right-yard-slot">{renderYard(yardSlots.right)}</div>
+          <div className="right-yard-slot">
+            {activeColors.includes(yardSlots.right) && renderYard(yardSlots.right)}
+          </div>
         </div>
-        {renderYard(yardSlots.bottom)}
+        {activeColors.includes(yardSlots.bottom) && renderYard(yardSlots.bottom)}
       </div>
 
-      <div className="controls">
-        {isMyTurn ? (
-          <div className="your-turn-banner">⭐ YOUR TURN ⭐</div>
-        ) : (
-          <div className="turn-pill" style={{ background: COLORS[currentPlayer].main }}>
-            {currentPlayerName}'s Turn ({COLORS[currentPlayer].label})
-          </div>
-        )}
+      {/* Bottom avatar row */}
+      <div className="avatar-row bottom">
+        {activeColors.includes(yardSlots.left) && renderAvatar(yardSlots.left)}
+        {activeColors.includes(yardSlots.bottom) && renderAvatar(yardSlots.bottom)}
+      </div>
 
-        <div className={`dice-row ${!isMyTurn ? "disabled" : ""}`}>
-          <div style={{display:"flex", flexDirection:"column", gap:"6px"}}>
+      {/* Controls */}
+      <div className="controls">
+        {/* Turn status */}
+        <div className={`turn-status-card ${isMyTurn ? 'your-turn' : ''}`}>
+          <div className="turn-label">
+            {isMyTurn ? "It's your turn" : "Current Turn"}
+          </div>
+          <div className="turn-name">
+            {isMyTurn ? '⭐ ' + me?.name + ' (You)' : currentPlayerName}
+          </div>
+        </div>
+
+        {/* Dice card */}
+        <div className={`dice-card ${!isMyTurn ? 'disabled' : ''}`}>
+          <div className="dice-sticks">
             <StickDie value={displayDice[0]} />
             <StickDie value={displayDice[1]} />
           </div>
           <div className="total-box">
             <div className="total-label">Total</div>
-            <div className="total-value" style={{ border: `3px solid ${COLORS[currentPlayer].main}` }}>
+            <div className={`total-value ${diceValue !== null && diceValue !== undefined ? 'has-value' : ''}`}>
               {diceValue ?? "—"}
             </div>
           </div>
@@ -1640,11 +2050,668 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
             onClick={rollDice}
             disabled={!isMyTurn || rolling || hasRolled || winner || autoMoving || animating}
             className="roll-button"
-            style={{
-              background: isMyTurn
-                ? `linear-gradient(135deg, ${COLORS[currentPlayer].main}, ${COLORS[currentPlayer].dark})`
-                : "linear-gradient(135deg, #9E9E9E, #616161)",
-            }}
+          >
+            {rolling ? "..." : animating ? "Moving" : autoMoving ? "Auto" : "Roll"}
+          </button>
+        </div>
+
+        {/* Message */}
+        <div className="message-box">{message || "—"}</div>
+
+        {pendingValues.length > 0 && (
+          <div className="pending-box">
+            Pending: <strong>[{pendingValues.join(", ")}]</strong>
+          </div>
+        )}
+
+        {winner && (
+          <button
+            onClick={onLeave}
+            className="play-again bounce"
+            style={{ '--player-color': COLORS[winner].main, background: COLORS[winner].main }}
+          >
+            🏠 Back to Lobby
+          </button>
+        )}
+
+        <div className="legend">
+          🎲 Bonus on 1, 5, 6, 12 · ✨ Glowing coins can move · 🛡️ X squares are safe
+        </div>
+
+        <button className="leave-room-btn" onClick={onLeave}>Leave Room</button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// SOLO GAME (offline, vs AI) — local state only, no Firebase
+// ============================================================
+
+function SoloGame({ playerName, aiCount, onLeave }) {
+  // aiCount: 1, 2, or 3 — number of AI opponents
+
+  const totalPlayers = 1 + aiCount;
+
+  // For 2-player (1v1) games, use OPPOSITE colors: red (left) vs yellow (right)
+  // For 3 or 4 players, use sequential PLAYER_ORDER
+  const usedColors = useMemo(() => {
+    if (totalPlayers === 2) return ["red", "yellow"]; // opposite sides
+    return PLAYER_ORDER.slice(0, totalPlayers);
+  }, [totalPlayers]);
+
+  const myColor = usedColors[0]; // user is always the first color (red)
+
+  // Build a "players" map similar to the online version so render code is reusable
+  const players = useMemo(() => {
+    const m = {};
+    usedColors.forEach((c, i) => {
+      m[`solo_${c}`] = {
+        name: i === 0 ? playerName : `Bot ${i}`,
+        color: c,
+        online: true,
+        isAI: i > 0,
+      };
+    });
+    return m;
+  // eslint-disable-next-line
+  }, [playerName, aiCount, usedColors.join(",")]);
+
+  const playerId = `solo_${myColor}`;
+  const me = players[playerId];
+
+  // Game state
+  const [coins, setCoins] = useState(() => makeInitialCoins());
+  const [currentPlayer, setCurrentPlayer] = useState(myColor);
+  const [dice, setDice] = useState([null, null]);
+  const [diceValue, setDiceValue] = useState(null);
+  const [hasRolled, setHasRolled] = useState(false);
+  const [pendingValues, setPendingValues] = useState([]);
+  const [message, setMessage] = useState("Roll the dice! First coin needs a 1 to enter.");
+  const [winner, setWinner] = useState(null);
+  const [rolling, setRolling] = useState(false);
+  const [animating, setAnimating] = useState(false);
+  const [autoMoving, setAutoMoving] = useState(false);
+  const [localDice, setLocalDice] = useState([null, null]);
+
+  // 🎯 KILLER RULE: Track which colors have made at least one capture.
+  // A coin cannot advance into the middle ring (path index >= 24) until its player has captured someone.
+  const [killers, setKillers] = useState(new Set()); // colors that have killed at least once
+
+  const isMyTurn = currentPlayer === myColor;
+  const isAITurn = !isMyTurn;
+  const currentPlayerObj = Object.values(players).find(p => p.color === currentPlayer);
+  const currentPlayerName = currentPlayerObj?.name || COLORS[currentPlayer].label;
+
+  // Helpers (same as multiplayer)
+  const hasCoinOnBoard = (color, c = coins) =>
+    Object.values(c).some((x) => x.color === color && x.pathIndex >= 0 && !x.finished);
+
+  const yardCoins = (color) =>
+    Object.entries(coins).filter(([_, c]) => c.color === color && c.pathIndex === -1 && !c.finished);
+
+  const boardCoins = (color) =>
+    Object.entries(coins).filter(([_, c]) => c.color === color && c.pathIndex >= 0 && !c.finished);
+
+  const finishedCount = (color) =>
+    Object.values(coins).filter((c) => c.color === color && c.finished).length;
+
+  // Rotation (same logic as multiplayer)
+  const ROTATION_DEG = { blue: 0, yellow: 90, green: 180, red: 270 };
+  const myRotation = ROTATION_DEG[myColor] ?? 0;
+  function getYardSlots(rotation) {
+    const cwOrder = ["green", "yellow", "blue", "red"];
+    const shift = rotation / 90;
+    return {
+      top: cwOrder[(0 - shift + 4) % 4],
+      right: cwOrder[(1 - shift + 4) % 4],
+      bottom: cwOrder[(2 - shift + 4) % 4],
+      left: cwOrder[(3 - shift + 4) % 4],
+    };
+  }
+  const yardSlots = getYardSlots(myRotation);
+
+  const activeColors = useMemo(() => {
+    return PLAYER_ORDER.filter(c => usedColors.includes(c));
+  // eslint-disable-next-line
+  }, [usedColors.join(",")]);
+
+  // Helper: can a specific coin move by `v` steps, given the killer rule?
+  const canCoinUseValue = (coin, v, color, hasKilledFlag, onBoardFlag) => {
+    if (coin.pathIndex === -1) {
+      // Yard entry rules
+      if (!onBoardFlag && v === 1) return true;
+      if (onBoardFlag && ENTRY_VALUES.has(v)) return true;
+      return false;
+    }
+    const newIdx = coin.pathIndex + v;
+    if (newIdx >= PATHS[color].length) return false; // overshoots center
+    // 🎯 Killer rule: cannot cross into middle ring without a kill
+    if (newIdx >= MIDDLE_RING_START && !hasKilledFlag) return false;
+    return true;
+  };
+
+  const getMovableCoins = useMemo(() => {
+    if (!hasRolled || pendingValues.length === 0) return {};
+    if (!isMyTurn) return {};
+    const movable = {};
+    const onBoardFlag = hasCoinOnBoard(currentPlayer);
+    const hasKilledFlag = killers.has(currentPlayer);
+    Object.entries(coins).forEach(([id, coin]) => {
+      if (coin.color !== currentPlayer || coin.finished) return;
+      for (const v of pendingValues) {
+        if (canCoinUseValue(coin, v, currentPlayer, hasKilledFlag, onBoardFlag)) {
+          movable[id] = v;
+          return;
+        }
+      }
+    });
+    return movable;
+  }, [coins, currentPlayer, pendingValues, hasRolled, isMyTurn, killers]);
+
+  // Roll dice (works for both user and AI — but disabled in UI for AI)
+  const rollDice = (auto = false) => {
+    if (rolling || winner || autoMoving || animating || hasRolled) return;
+    if (!auto && !isMyTurn) return;
+    setRolling(true);
+    let n = 0;
+    const interval = setInterval(() => {
+      setLocalDice([Math.floor(Math.random() * 4), Math.floor(Math.random() * 4)]);
+      n++;
+      if (n > 8) {
+        clearInterval(interval);
+        const f1 = Math.floor(Math.random() * 4);
+        const f2 = Math.floor(Math.random() * 4);
+        setLocalDice([f1, f2]);
+        setDice([f1, f2]);
+        let value = f1 + f2;
+        if (value === 0) value = 12;
+        setDiceValue(value);
+        setRolling(false);
+        setHasRolled(true);
+        setPendingValues((prev) => [...prev, value]);
+      }
+    }, 80);
+  };
+
+  // Re-evaluate after dice or coin state changes
+  useEffect(() => {
+    if (!hasRolled || rolling || animating || autoMoving || winner) return;
+    if (pendingValues.length === 0) return;
+    const value = pendingValues[pendingValues.length - 1];
+    evaluateRoll(value, pendingValues);
+  // eslint-disable-next-line
+  }, [hasRolled, JSON.stringify(pendingValues), JSON.stringify(coins), currentPlayer]);
+
+  // AI auto-roll: when it becomes AI's turn, AI rolls after a delay
+  useEffect(() => {
+    if (winner || rolling || hasRolled || animating || autoMoving) return;
+    if (!isAITurn) return;
+    const aiRollDelay = 500 + Math.random() * 400; // 0.5–0.9s "thinking"
+    const t = setTimeout(() => rollDice(true), aiRollDelay);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line
+  }, [currentPlayer, hasRolled, rolling, animating, autoMoving, winner]);
+
+  const evaluateRoll = (value, allValues) => {
+    const onBoardFlag = hasCoinOnBoard(currentPlayer);
+    const hasKilledFlag = killers.has(currentPlayer);
+
+    const movableForThisValue = {};
+    Object.entries(coins).forEach(([id, coin]) => {
+      if (coin.color !== currentPlayer || coin.finished) return;
+      if (canCoinUseValue(coin, value, currentPlayer, hasKilledFlag, onBoardFlag)) {
+        movableForThisValue[id] = value;
+      }
+    });
+
+    const movableAny = {};
+    Object.entries(coins).forEach(([id, coin]) => {
+      if (coin.color !== currentPlayer || coin.finished) return;
+      for (const v of allValues) {
+        if (canCoinUseValue(coin, v, currentPlayer, hasKilledFlag, onBoardFlag)) {
+          movableAny[id] = v;
+          return;
+        }
+      }
+    });
+
+    const movableIdsAny = Object.keys(movableAny);
+    const movableIdsForValue = Object.keys(movableForThisValue);
+    const isBonus = BONUS_VALUES.has(value);
+
+    if (movableIdsAny.length === 0) {
+      if (isBonus) {
+        setMessage(`${currentPlayerName} rolled ${value} (bonus). No moves — roll again!`);
+        setHasRolled(false);
+        setDiceValue(null);
+        setPendingValues([]);
+        setDice([null, null]);
+      } else {
+        setMessage(`${currentPlayerName} rolled ${value} — no moves. Turn passes.`);
+        setPendingValues([]);
+        setHasRolled(false);
+        setTimeout(() => endTurn(), 500);
+      }
+      return;
+    }
+
+    const shouldAutoMove =
+      isAITurn || // AI ALWAYS auto-moves
+      (allValues.length === 1 && movableIdsForValue.length === 1) ||
+      (movableIdsAny.length === 1);
+
+    if (shouldAutoMove) {
+      // AI: pick a random valid coin (any coin with any pending value)
+      // For human: pick the unique option
+      let coinId;
+      if (isAITurn && movableIdsAny.length > 1) {
+        // AI random choice
+        const ids = movableIdsAny;
+        coinId = ids[Math.floor(Math.random() * ids.length)];
+      } else {
+        coinId = movableIdsForValue.length === 1 ? movableIdsForValue[0] : movableIdsAny[0];
+      }
+      const stepsToMove = movableForThisValue[coinId] || movableAny[coinId];
+      let autoMsg = `${currentPlayerName} rolled ${value}. `;
+      if (isAITurn) autoMsg += `🤖 Bot moving ${stepsToMove}...`;
+      else if (movableIdsAny.length === 1) autoMsg += `Only one coin can move — auto-moving ${stepsToMove}...`;
+      else autoMsg += `Auto-moving ${stepsToMove}...`;
+      setMessage(autoMsg);
+      setAutoMoving(true);
+      const aiThinkDelay = isAITurn ? 300 + Math.random() * 300 : 350;
+      setTimeout(async () => {
+        await executeMove(coinId);
+        setAutoMoving(false);
+      }, aiThinkDelay);
+      return;
+    }
+
+    let msg = `${currentPlayerName} rolled ${value}.`;
+    if (isBonus) msg += " 🎲 Bonus turn!";
+    if (allValues.length > 1) msg += ` Pending: [${allValues.join(", ")}].`;
+    msg += ` Click a glowing coin.`;
+    setMessage(msg);
+  };
+
+  const executeMove = async (coinId) => {
+    const coin = coins[coinId];
+    if (!coin || coin.color !== currentPlayer || coin.finished) return;
+
+    const onBoardFlag = hasCoinOnBoard(currentPlayer);
+    const hasKilledFlag = killers.has(currentPlayer);
+    let usedValue = null;
+    for (const v of pendingValues) {
+      if (canCoinUseValue(coin, v, currentPlayer, hasKilledFlag, onBoardFlag)) {
+        usedValue = v;
+        break;
+      }
+    }
+    if (usedValue === null) return;
+
+    setAnimating(true);
+    let startIdx = coin.pathIndex;
+    let endIdx = coin.pathIndex === -1 ? 0 : coin.pathIndex + usedValue;
+
+    if (coin.pathIndex === -1) {
+      setCoins((prev) => ({ ...prev, [coinId]: { ...prev[coinId], pathIndex: 0 } }));
+      setMessage(`${currentPlayerName} entered the board!`);
+      await new Promise((r) => setTimeout(r, 180));
+      startIdx = 0;
+    }
+
+    for (let step = startIdx + 1; step <= endIdx; step++) {
+      setCoins((prev) => ({ ...prev, [coinId]: { ...prev[coinId], pathIndex: step } }));
+      const stepsLeft = endIdx - step;
+      setMessage(stepsLeft > 0 ? `Moving... ${stepsLeft} step${stepsLeft > 1 ? "s" : ""} to go` : `Moved ${usedValue} steps.`);
+      await new Promise((r) => setTimeout(r, 120));
+    }
+
+    const finalSquare = PATHS[currentPlayer][endIdx];
+    const finished = endIdx === PATHS[currentPlayer].length - 1;
+
+    let captured = false;
+    let capturedNames = [];
+    let isWinner = false;
+
+    setCoins((prev) => {
+      const newCoins = { ...prev };
+      newCoins[coinId] = { ...newCoins[coinId], finished };
+      if (!SAFE_SQUARES.has(finalSquare) && !finished) {
+        Object.entries(newCoins).forEach(([id, c]) => {
+          if (c.color !== currentPlayer && !c.finished && c.pathIndex >= 0 && PATHS[c.color][c.pathIndex] === finalSquare) {
+            newCoins[id] = { ...c, pathIndex: -1 };
+            captured = true;
+            const owner = Object.values(players).find(p => p.color === c.color);
+            capturedNames.push(owner ? owner.name : COLORS[c.color].label);
+          }
+        });
+      }
+      const finishedNow = Object.values(newCoins).filter((c) => c.color === currentPlayer && c.finished).length;
+      if (finishedNow === 6) isWinner = true;
+      return newCoins;
+    });
+
+    if (isWinner) {
+      setWinner(currentPlayer);
+      setMessage(`🎉 ${currentPlayerName} wins! All 6 coins reached the center!`);
+      setAnimating(false);
+      return;
+    }
+
+    // 🎯 Killer rule: mark this player as having captured (unlocks middle ring)
+    const wasFirstKill = captured && !killers.has(currentPlayer);
+    if (captured && !killers.has(currentPlayer)) {
+      setKillers((prev) => {
+        const next = new Set(prev);
+        next.add(currentPlayer);
+        return next;
+      });
+    }
+
+    const remaining = [...pendingValues];
+    remaining.splice(remaining.indexOf(usedValue), 1);
+    setPendingValues(remaining);
+
+    let msg = `${currentPlayerName} moved ${usedValue} step${usedValue > 1 ? "s" : ""}.`;
+    if (captured) msg += ` 💥 Captured ${capturedNames.join(", ")}!`;
+    if (wasFirstKill) msg += " 🔓 Middle ring unlocked!";
+    if (finished) msg += " ⭐ Reached center!";
+    if (SAFE_SQUARES.has(finalSquare) && !finished && coin.pathIndex !== -1) msg += " 🛡️ Safe on X.";
+
+    if (remaining.length > 0) {
+      msg += ` Remaining: [${remaining.join(", ")}].`;
+      setMessage(msg);
+    } else {
+      const lastRoll = diceValue;
+      if (BONUS_VALUES.has(lastRoll) || captured || finished) {
+        msg += " Roll again!";
+        setMessage(msg);
+        setHasRolled(false);
+        setDiceValue(null);
+        setDice([null, null]);
+      } else {
+        msg += " Turn ends.";
+        setMessage(msg);
+        setHasRolled(false);
+        setDiceValue(null);
+        setDice([null, null]);
+        setTimeout(() => endTurn(), 350);
+      }
+    }
+    setAnimating(false);
+  };
+
+  const endTurn = () => {
+    const idx = activeColors.indexOf(currentPlayer);
+    const next = activeColors[(idx + 1) % activeColors.length];
+    const nextObj = Object.values(players).find(p => p.color === next);
+    setCurrentPlayer(next);
+    setDiceValue(null);
+    setDice([null, null]);
+    setHasRolled(false);
+    setPendingValues([]);
+    setMessage(`${nextObj?.name || COLORS[next].label}'s turn. ${nextObj?.isAI ? '🤖 Thinking...' : 'Roll the dice.'}`);
+  };
+
+  const handleCoinClick = (coinId) => {
+    if (!isMyTurn || !hasRolled || rolling || winner || autoMoving || animating) return;
+    if (!(coinId in getMovableCoins)) return;
+    executeMove(coinId);
+  };
+
+  // ============================================================
+  // RENDER (reuses same patterns as MultiplayerGame)
+  // ============================================================
+
+  const hexToRgba = (hex, alpha) => {
+    const h = hex.replace('#', '');
+    const r = parseInt(h.substring(0,2), 16);
+    const g = parseInt(h.substring(2,4), 16);
+    const b = parseInt(h.substring(4,6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+  const themeStyle = {
+    '--player-color': COLORS[myColor].main,
+    '--player-tint': hexToRgba(COLORS[myColor].main, 0.08),
+    '--player-tint-strong': hexToRgba(COLORS[myColor].main, 0.18),
+  };
+
+  const renderCell = (r, c) => {
+    const key = `${r},${c}`;
+    const isCenter = key === CENTER;
+    const isEntry = key in ENTRY_COLOR_MAP;
+    const entryColor = ENTRY_COLOR_MAP[key];
+    const isCornerSafe = ["1,1", "1,5", "5,1", "5,5"].includes(key);
+    const isSafe = SAFE_SQUARES.has(key);
+
+    const coinsHere = Object.entries(coins).filter(([_, coin]) => {
+      if (coin.pathIndex < 0 || coin.finished) return false;
+      return PATHS[coin.color][coin.pathIndex] === key;
+    });
+    const finishedHere = isCenter ? Object.entries(coins).filter(([_, coin]) => coin.finished) : [];
+
+    let bg = "white";
+    if (isEntry) bg = COLORS[entryColor].main;
+    else if (isCenter) bg = "#9E9E9E";
+    else if (isSafe || isCornerSafe) bg = "#E8F5E9";
+
+    const hasAnimatingCoin = animating && coinsHere.some(([_, c]) => c.color === currentPlayer);
+    const cellStyle = {
+      background: bg,
+      boxShadow: hasAnimatingCoin ? `inset 0 0 0 3px ${COLORS[currentPlayer].main}, 0 0 12px ${COLORS[currentPlayer].main}` : "none",
+      zIndex: hasAnimatingCoin ? 5 : 1,
+    };
+
+    return (
+      <div key={key} className="cell" style={cellStyle}>
+        <div className="cell-content-wrap">
+          {(isSafe || isCornerSafe) && (
+            <span className="x-mark" style={{
+              color: isEntry || isCenter ? "rgba(0,0,0,0.85)" : "#1B5E20",
+              textShadow: isEntry || isCenter ? "none" : "0 0 2px rgba(255,255,255,0.5)",
+            }}>X</span>
+          )}
+          {coinsHere.length > 0 && (
+            <div className="coin-stack">
+              {coinsHere.slice(0, 4).map(([id, coin]) => {
+                const isMovable = id in getMovableCoins;
+                const sz = coinsHere.length > 1 ? "45%" : "75%";
+                return (
+                  <button
+                    key={id}
+                    onClick={() => handleCoinClick(id)}
+                    className={`coin ${isMovable ? "pulse" : ""}`}
+                    style={{
+                      width: sz, height: sz,
+                      background: `radial-gradient(circle at 30% 30%, ${COLORS[coin.color].light}, ${COLORS[coin.color].main} 60%, ${COLORS[coin.color].dark})`,
+                      border: `1.5px solid ${COLORS[coin.color].dark}`,
+                      boxShadow: isMovable ? `0 0 0 2px white, 0 0 8px 3px ${COLORS[coin.color].main}` : "0 1px 2px rgba(0,0,0,0.3)",
+                      transform: isMovable ? "scale(1.1)" : "scale(1)",
+                    }}
+                  />
+                );
+              })}
+            </div>
+          )}
+          {isCenter && finishedHere.length > 0 && coinsHere.length === 0 && (
+            <div style={{position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center"}}>
+              <span style={{color:"white", fontSize:"12px", fontWeight:700}}>⭐{finishedHere.length}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const Pawn = ({ color, id, size = 18 }) => {
+    const isMovable = id in getMovableCoins;
+    return (
+      <button
+        onClick={() => id && handleCoinClick(id)}
+        className={isMovable ? "pawn-pulse" : ""}
+        style={{
+          position: "relative", width: `${size}px`, height: `${size * 1.4}px`,
+          transition: "all 0.2s",
+          transform: isMovable ? "scale(1.15)" : "scale(1)",
+          filter: isMovable ? `drop-shadow(0 0 4px ${COLORS[color].main}) drop-shadow(0 0 2px white)` : "drop-shadow(0 1px 1px rgba(0,0,0,0.3))",
+        }}
+      >
+        <svg viewBox="0 0 20 28" width="100%" height="100%">
+          <ellipse cx="10" cy="6" rx="5" ry="5" fill={COLORS[color].main} stroke={COLORS[color].dark} strokeWidth="0.5"/>
+          <path d="M 6 11 Q 6 13 7 14 L 13 14 Q 14 13 14 11 Z" fill={COLORS[color].dark}/>
+          <path d="M 7 14 L 6 22 L 14 22 L 13 14 Z" fill={COLORS[color].main} stroke={COLORS[color].dark} strokeWidth="0.4"/>
+          <ellipse cx="10" cy="22" rx="6" ry="2" fill={COLORS[color].dark}/>
+          <ellipse cx="10" cy="22" rx="6" ry="1.5" fill={COLORS[color].main}/>
+          <ellipse cx="8.5" cy="4.5" rx="1.2" ry="1.5" fill="rgba(255,255,255,0.4)"/>
+        </svg>
+      </button>
+    );
+  };
+
+  const renderYard = (color) => {
+    const yc = yardCoins(color);
+    const finished = finishedCount(color);
+    const isCurrent = color === currentPlayer;
+    const isMine = color === myColor;
+    const yardTint = `${COLORS[color].main}1A`;
+    return (
+      <div className={`yard ${isCurrent ? "current" : ""} ${isMine ? "assigned" : ""}`} style={{
+        '--yard-color': COLORS[color].main,
+        '--yard-tint': yardTint,
+      }}>
+        <div className="yard-label" style={{ color: COLORS[color].main }}>{COLORS[color].label}</div>
+        <div className="yard-grid">
+          {yc.map(([id]) => <Pawn key={id} color={color} id={id} size={18} />)}
+          {Array.from({ length: 6 - yc.length - finished }).map((_, i) => (
+            <div key={`e-${i}`} style={{ width: "18px", height: "25px", opacity: 0.15 }}>
+              <svg viewBox="0 0 20 28" width="100%" height="100%">
+                <ellipse cx="10" cy="6" rx="5" ry="5" fill="none" stroke={COLORS[color].dark} strokeWidth="0.8" strokeDasharray="2"/>
+                <path d="M 7 14 L 6 22 L 14 22 L 13 14 Z" fill="none" stroke={COLORS[color].dark} strokeWidth="0.6" strokeDasharray="2"/>
+              </svg>
+            </div>
+          ))}
+        </div>
+        <div className="yard-finished">⭐ {finished}/6</div>
+      </div>
+    );
+  };
+
+  const StickDie = ({ value }) => {
+    if (value === null) return <div className="stick-die stick-die-empty"></div>;
+    const dots = [];
+    for (let i = 0; i < value; i++) dots.push(<div key={i} className="stick-dot"></div>);
+    return (
+      <div className="stick-die">
+        {value === 0 ? <span style={{fontSize:"9px", color:"#3a2510", fontWeight:700, letterSpacing:"0.05em"}}>FLAT</span> : dots}
+      </div>
+    );
+  };
+
+  const renderAvatar = (color) => {
+    const player = Object.values(players).find(p => p.color === color);
+    if (!player) {
+      return (
+        <div key={`empty-${color}`} className="player-avatar empty">
+          <div className="avatar-circle" style={{ '--avatar-color': COLORS[color].main }}>?</div>
+          <div className="avatar-info">
+            <div className="avatar-name">No player</div>
+            <div className="avatar-progress" style={{visibility:'hidden'}}>0/6</div>
+          </div>
+        </div>
+      );
+    }
+    const isCurrent = currentPlayer === color;
+    const isMine = color === myColor;
+    const finished = finishedCount(color);
+    const initial = (player.name || '?').charAt(0).toUpperCase();
+    const isUnlocked = killers.has(color);
+    return (
+      <div
+        key={`av-${color}`}
+        className={`player-avatar ${isCurrent ? 'current' : ''} ${isMine ? 'is-me' : ''}`}
+        style={{ '--avatar-color': COLORS[color].main }}
+      >
+        <div className="avatar-circle" style={{ '--avatar-color': COLORS[color].main }}>
+          {player.isAI ? '🤖' : initial}
+        </div>
+        <div className="avatar-info">
+          <div className="avatar-name" title={player.name}>{player.name}</div>
+          <div className="avatar-progress">
+            {finished}/6 {isUnlocked ? '🔓' : '🔒'}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const displayDice = rolling ? localDice : dice;
+
+  return (
+    <div className="app-root" style={themeStyle}>
+      <div className="title-block">
+        <h1>தாயம் · Thaayam</h1>
+        <div className="room-pill">
+          <span>🤖 vs {aiCount} Bot{aiCount > 1 ? 's' : ''} · Solo Mode</span>
+        </div>
+      </div>
+
+      <div className="avatar-row top">
+        {usedColors.includes(yardSlots.top) && renderAvatar(yardSlots.top)}
+        {usedColors.includes(yardSlots.right) && renderAvatar(yardSlots.right)}
+      </div>
+
+      <div className="board-area">
+        {usedColors.includes(yardSlots.top) && renderYard(yardSlots.top)}
+        <div className="middle-row">
+          <div className="left-yard-slot">
+            {usedColors.includes(yardSlots.left) && renderYard(yardSlots.left)}
+          </div>
+          <div className="board" style={{
+            transform: `rotate(${myRotation}deg)`,
+            '--counter-rotate': `rotate(${-myRotation}deg)`,
+          }}>
+            <div className="board-grid">
+              {Array.from({ length: 7 }, (_, r) =>
+                Array.from({ length: 7 }, (_, c) => renderCell(r, c))
+              )}
+            </div>
+          </div>
+          <div className="right-yard-slot">
+            {usedColors.includes(yardSlots.right) && renderYard(yardSlots.right)}
+          </div>
+        </div>
+        {usedColors.includes(yardSlots.bottom) && renderYard(yardSlots.bottom)}
+      </div>
+
+      <div className="avatar-row bottom">
+        {usedColors.includes(yardSlots.left) && renderAvatar(yardSlots.left)}
+        {usedColors.includes(yardSlots.bottom) && renderAvatar(yardSlots.bottom)}
+      </div>
+
+      <div className="controls">
+        <div className={`turn-status-card ${isMyTurn ? 'your-turn' : ''}`}>
+          <div className="turn-label">{isMyTurn ? "It's your turn" : "Bot's Turn"}</div>
+          <div className="turn-name">
+            {isMyTurn ? '⭐ ' + me?.name + ' (You)' : currentPlayerName + ' 🤖'}
+          </div>
+        </div>
+
+        <div className={`dice-card ${!isMyTurn ? 'disabled' : ''}`}>
+          <div className="dice-sticks">
+            <StickDie value={displayDice[0]} />
+            <StickDie value={displayDice[1]} />
+          </div>
+          <div className="total-box">
+            <div className="total-label">Total</div>
+            <div className={`total-value ${diceValue !== null && diceValue !== undefined ? 'has-value' : ''}`}>
+              {diceValue ?? "—"}
+            </div>
+          </div>
+          <button
+            onClick={() => rollDice(false)}
+            disabled={!isMyTurn || rolling || hasRolled || winner || autoMoving || animating}
+            className="roll-button"
           >
             {rolling ? "..." : animating ? "Moving" : autoMoving ? "Auto" : "Roll"}
           </button>
@@ -1654,25 +2721,21 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
 
         {pendingValues.length > 0 && (
           <div className="pending-box">
-            Pending values: <strong>[{pendingValues.join(", ")}]</strong>
+            Pending: <strong>[{pendingValues.join(", ")}]</strong>
           </div>
         )}
 
         {winner && (
-          <button
-            onClick={onLeave}
-            className="play-again bounce"
-            style={{ background: COLORS[winner].main }}
-          >
+          <button onClick={onLeave} className="play-again bounce" style={{ background: COLORS[winner].main }}>
             🏠 Back to Lobby
           </button>
         )}
 
         <div className="legend">
-          🎲 Bonus on 1, 5, 6, 12 · ✨ Glowing coins can move · 🛡️ X squares are SAFE
+          🎲 Bonus on 1, 5, 6, 12 · ✨ Glowing coins can move · 🛡️ X squares are safe
         </div>
 
-        <button className="leave-room-btn" onClick={onLeave}>Leave Room</button>
+        <button className="leave-room-btn" onClick={onLeave}>Leave Game</button>
       </div>
     </div>
   );
@@ -1683,12 +2746,13 @@ function MultiplayerGame({ roomCode, playerId, room, onLeave }) {
 // ============================================================
 
 function App() {
-  const [screen, setScreen] = useState("lobby"); // lobby | waiting | game
+  const [screen, setScreen] = useState("lobby"); // lobby | waiting | game | solo
   const [roomCode, setRoomCode] = useState(null);
   const [playerId, setPlayerId] = useState(null);
   const [myColor, setMyColor] = useState(null);
   const [room, setRoom] = useState(null);
   const [connected, setConnected] = useState(true);
+  const [soloConfig, setSoloConfig] = useState(null); // { name, aiCount }
 
   // Subscribe to firebase connection state
   useEffect(() => {
@@ -1706,7 +2770,6 @@ function App() {
     const cb = (snap) => {
       const data = snap.val();
       if (!data) {
-        // Room deleted
         handleLeave();
         return;
       }
@@ -1728,6 +2791,11 @@ function App() {
     setScreen("waiting");
   };
 
+  const handleStartSolo = (name, aiCount) => {
+    setSoloConfig({ name, aiCount });
+    setScreen("solo");
+  };
+
   const handleLeave = async () => {
     if (roomCode && playerId && firebaseReady) {
       try {
@@ -1735,13 +2803,11 @@ function App() {
         if (snap.exists()) {
           await db.ref(`rooms/${roomCode}/players/${playerId}`).remove();
         }
-        // If room is empty or host left during waiting, delete it
         const roomSnap = await db.ref(`rooms/${roomCode}`).once("value");
         const roomData = roomSnap.val();
         if (!roomData?.players || Object.keys(roomData.players).length === 0) {
           await db.ref(`rooms/${roomCode}`).remove();
         } else if (roomData.host === playerId && roomData.status === "waiting") {
-          // Host left during waiting -> delete room
           await db.ref(`rooms/${roomCode}`).remove();
         }
       } catch (e) {
@@ -1752,19 +2818,25 @@ function App() {
     setPlayerId(null);
     setMyColor(null);
     setRoom(null);
+    setSoloConfig(null);
     setScreen("lobby");
   };
 
   return (
     <>
-      {firebaseReady && (
+      {firebaseReady && screen !== "solo" && (
         <div className={`conn-status ${connected ? "online" : "offline"}`}>
           <span className="conn-dot" />
           {connected ? "ONLINE" : "OFFLINE"}
         </div>
       )}
 
-      {screen === "lobby" && <Lobby onJoinRoom={handleJoinRoom} />}
+      {screen === "lobby" && (
+        <Lobby
+          onJoinRoom={handleJoinRoom}
+          onStartSolo={handleStartSolo}
+        />
+      )}
       {screen === "waiting" && room && (
         <WaitingRoom
           roomCode={roomCode}
@@ -1778,6 +2850,13 @@ function App() {
           roomCode={roomCode}
           playerId={playerId}
           room={room}
+          onLeave={handleLeave}
+        />
+      )}
+      {screen === "solo" && soloConfig && (
+        <SoloGame
+          playerName={soloConfig.name}
+          aiCount={soloConfig.aiCount}
           onLeave={handleLeave}
         />
       )}
